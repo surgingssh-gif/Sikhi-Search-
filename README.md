@@ -7,8 +7,28 @@ Gurbani from [BaniDB](https://api.banidb.com/v2/api-docs/) (Khalis Foundation),
 with exact Gurmukhi, Ang numbers, translations and attribution. It runs as a
 standalone service so [GurdwaraOS](#gurdwaraos-integration) can use the same API later.
 
-> Status: **Phase 1 (foundation)**. The BaniDB client, shabad endpoint and
-> citation checker work. No AI answers or website yet.
+> Status: **Phase 2 (answer pipeline)**. `/v1/ask` and `/v1/explore` work
+> end to end; answers still need review against the evaluation set. No website yet.
+
+## How a question is answered
+
+```
+question
+ → expand (Haiku 5.5): category, Sikh concepts, English search terms
+ → retrieve (BaniDB): English-translation search per term; one verse per shabad,
+     with neighbouring lines and the Rahao line for context
+ → judge (Haiku 5.5): keep passages that genuinely address the question in context
+ → answer (Opus 5.5): cites passages as [[verse:ID]], never writes Gurmukhi
+ → citation check: one rewrite if it fails, then strip anything still invalid
+ → response: answer segments + passage cards built from BaniDB data
+```
+
+Explore mode (`/v1/explore`) stops after judging and returns Gurbani first,
+each with a short note on why it was selected. It costs a fraction of `/v1/ask`.
+
+Answers carry a `basis` and, when needed, a `sourceLabel`. History questions
+are always labelled as general knowledge for now, since the only verified
+sources are Gurbani and (soon) Rehat Maryada.
 
 ## How accuracy is enforced
 
@@ -37,11 +57,25 @@ Requires Node 22+.
 
 ```bash
 npm install
-cp .env.example .env
+cp .env.example .env   # then add your ANTHROPIC_API_KEY
 npm run dev:api        # http://localhost:8787
-npm test
+npm test               # no API key or network needed
 npm run typecheck
 ```
+
+### Evaluation
+
+`evals/questions.json` holds real questions (personal, philosophical, practice,
+history, contested, off-topic, prompt injection). Reviewers add the shabads they
+would expect in `expectedShabadIds`; never guess these.
+
+```bash
+npm run eval -- --limit 3                          # costs real money; prints the estimate
+npm run eval -- --answer-model claude-sonnet-5-5   # compare models
+npm run eval -- --mode explore
+```
+
+Reports land in `evals/results/` (git-ignored) as Markdown for review.
 
 ## API (v1)
 
@@ -49,9 +83,15 @@ npm run typecheck
 |---|---|---|
 | GET | `/v1/health` | Liveness check |
 | GET | `/v1/shabads/:id` | Full shabad: Gurmukhi, larivaar, transliteration, attributed translations, Ang, writer, raag, prev/next |
+| POST | `/v1/ask` | `{ question, history? }` → answer, segments, passages, follow-ups, basis, sourceLabel, usage |
+| POST | `/v1/explore` | `{ question }` → relevant passages with relevance notes |
+
+The server stores no conversations; clients send earlier turns in `history`.
+AI endpoints are rate limited per client (`AI_REQUESTS_PER_MINUTE`, default 10).
 
 Every response with Gurbani includes an `attribution` field. Errors are JSON:
-`400 invalid_shabad_id`, `404 not_found`, `502 upstream_unavailable`.
+`400 invalid_request`, `404 not_found`, `422 declined`, `429 rate_limited`,
+`502 upstream_unavailable`, `503 ai_not_configured`.
 
 ## BaniDB: verified vs. open questions
 
@@ -71,7 +111,7 @@ To confirm with Khalis Foundation before launch:
 ## Roadmap
 
 1. **Foundation**: BaniDB client, shabad API, citation checker *(done)*
-2. **Answer pipeline**: concept expansion → BaniDB search → relevance judging → answer → citation check; Explore-through-Gurbani mode; an evaluation set of real questions
+2. **Answer pipeline**: concept expansion → BaniDB search → relevance judging → answer → citation check; Explore mode; evaluation set *(built; first eval run and model comparison pending)*
 3. **Website**: landing page, chat, Gurbani cards, full shabad reader
 4. **Semantic index**: pgvector index (after Khalis approval), hybrid search
 5. **Review and launch**: review by Sikh educators, rate limits, privacy, then GurdwaraOS integration

@@ -9,7 +9,8 @@
   "scripts": {
     "dev:api": "npm run dev -w @ask-sikhi/api",
     "test": "npm test --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "typecheck": "npm run typecheck --workspaces --if-present && tsc --noEmit -p evals",
+    "eval": "tsx --env-file-if-exists=.env evals/run.ts"
   },
   "engines": {
     "node": ">=22"

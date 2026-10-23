@@ -85,3 +85,24 @@ export function validateAnswer(answer: string, retrieved: Iterable<Verse>): Cita
     angMismatches,
   };
 }
+
+/**
+ * Last-resort cleanup when a regenerated answer still breaks the contract:
+ * drops unknown citation markers, model-written Gurmukhi and wrong Ang mentions.
+ * Valid citation markers are left in place.
+ */
+export function sanitizeAnswer(answer: string, report: CitationReport): string {
+  const unknown = new Set(report.unknownCitations);
+  const badAngs = new Set(report.angMismatches);
+  return parseSegments(answer)
+    .map((seg) => {
+      if (seg.type === "citation") return unknown.has(seg.verseId) ? "" : `[[verse:${seg.verseId}]]`;
+      return seg.text
+        .replace(GURMUKHI_RUN, "")
+        .replace(ANG_MENTION, (m, n: string) => (badAngs.has(Number(n)) ? "" : m));
+    })
+    .join("")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}

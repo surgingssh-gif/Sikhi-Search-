@@ -60,8 +60,8 @@ Requires Node 22+.
 ```bash
 npm install
 cp .env.example .env   # then add your ANTHROPIC_API_KEY
-npm run dev:api        # API on http://localhost:8787
-npm run dev:web        # website on http://localhost:3000 (in a second terminal)
+npm run dev            # API on :8787 and website on http://localhost:3000; Ctrl+C stops both
+                       # (or run them separately: npm run dev:api / npm run dev:web)
 npm test               # no API key or network needed
 npm run typecheck
 ```

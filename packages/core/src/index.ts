@@ -20,6 +20,7 @@ export { ANSWER_SYSTEM, AnswerSchema, type GeneratedAnswer } from "./pipeline/an
 export {
   validateAnswer,
   sanitizeAnswer,
+  findUncitedReferences,
   parseSegments,
   CITATION_PATTERN,
   type CitationReport,

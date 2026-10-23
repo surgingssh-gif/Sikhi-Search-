@@ -1,7 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ask, explore, GENERAL_KNOWLEDGE_LABEL, HISTORY_LABEL, retrieveCandidates } from "../src";
-import { contextFor } from "../src/pipeline/retrieve";
-import { expansion, fakeBanidb, fakeLlm, judgeAll, searchResult, shabad1 } from "./fakes";
+import { contextFor, endsMidSentence, sentenceSpan, startsMidSentence } from "../src/pipeline/retrieve";
+import { expansion, fakeBanidb, fakeLlm, judgeAll, searchResult, shabad1, shabad568 } from "./fakes";
 
 const [hitA, hitB] = searchResult.hits.map((h) => h.verse) as [(typeof searchResult.hits)[0]["verse"], (typeof searchResult.hits)[0]["verse"]];
 
@@ -19,11 +19,10 @@ describe("ask", () => {
     expect(result.passages).toHaveLength(1);
     expect(result.passages[0]).toMatchObject({
       verseId: hitA.verseId,
-      gurmukhi: hitA.gurmukhi,
       ang: hitA.ang,
-      translation: hitA.translations[0],
+      lines: [{ verseId: hitA.verseId, gurmukhi: hitA.gurmukhi, translation: hitA.translations[0] }],
     });
-    expect(result.citationCheck).toEqual({ passedFirstTime: true, retried: false, sanitized: false });
+    expect(result.citationCheck).toEqual({ passedFirstTime: true, retried: false, sanitized: false, uncitedReferences: [] });
     expect(result.sourceLabel).toBeNull();
     expect(result.segments.some((s) => s.type === "citation")).toBe(true);
     expect(result.usage.steps.map((s) => s.step)).toEqual(["expand", "judge", "answer"]);
@@ -49,7 +48,7 @@ describe("ask", () => {
     });
     const result = await ask({ llm, banidb: fakeBanidb() }, "jealousy?");
 
-    expect(result.citationCheck).toEqual({ passedFirstTime: false, retried: true, sanitized: false });
+    expect(result.citationCheck).toMatchObject({ passedFirstTime: false, retried: true, sanitized: false });
     expect(result.passages.map((p) => p.verseId)).toEqual([hitB.verseId]);
     const retry = calls.filter((c) => c.step === "answer")[1]!;
     expect(retry.messages.at(-1)!.content).toContain("424242");
@@ -113,15 +112,71 @@ describe("explore", () => {
 
 describe("retrieveCandidates", () => {
   it("keeps one verse per shabad", async () => {
-    const candidates = await retrieveCandidates(fakeBanidb(), ["jealousy", "envy"]);
+    const candidates = await retrieveCandidates(fakeBanidb(), ["jealousy"]);
     const shabadIds = candidates.map((c) => c.shabadId);
+    expect(candidates.length).toBe(searchResult.hits.length);
     expect(new Set(shabadIds).size).toBe(shabadIds.length);
-    expect(candidates.every((c) => c.matchedTerms.length === 2)).toBe(true);
+  });
+
+  it("drops BaniDB's substring matches ('jealous' inside 'jealousy')", async () => {
+    // Every fixture line contains "jealousy"; none contains the whole word "jealous".
+    expect(await retrieveCandidates(fakeBanidb(), ["jealous"])).toEqual([]);
+  });
+
+  it("ranks lines that match more of the search terms first", async () => {
+    // Only one fixture line mentions both jealousy and hate.
+    const [top, ...rest] = await retrieveCandidates(fakeBanidb(), ["jealousy", "hate"]);
+    expect(top!.matchedTerms).toEqual(["jealousy", "hate"]);
+    expect(rest.every((c) => c.matchedTerms.length === 1)).toBe(true);
+  });
+
+  it("returns nothing, without calling BaniDB, when there are no search terms", async () => {
+    const banidb = { ...fakeBanidb(), searchTranslations: vi.fn() };
+    expect(await retrieveCandidates(banidb, [])).toEqual([]);
+    expect(banidb.searchTranslations).not.toHaveBeenCalled();
   });
 
   it("adds neighbouring lines as context, not the verse itself", () => {
     const target = shabad1.verses[4]!;
     const ctx = contextFor(shabad1, target.verseId, 1);
     expect(ctx.map((v) => v.verseId)).toEqual([shabad1.verses[3]!.verseId, shabad1.verses[5]!.verseId]);
+  });
+});
+
+describe("sentenceSpan", () => {
+  // Shabad 568 (Ang 189) splits sentences across lines, e.g. a line whose
+  // translation begins "forget to feel jealous of others."
+  const ids = shabad568.verses.map((v) => v.verseId);
+  const idx = (n: number) => ids.indexOf(n);
+
+  it("pulls in the start of a sentence that began on the previous line", () => {
+    const fragment = shabad568.verses.find((v) => startsMidSentence(v.translations[0]!.text))!;
+    const i = idx(fragment.verseId);
+    expect(sentenceSpan(shabad568, fragment.verseId)).toEqual([i - 1, i]);
+  });
+
+  it("pulls in the end of a sentence that continues on the next line", () => {
+    const opener = shabad568.verses.find((v, i) => i > 0 && endsMidSentence(v.translations[0]!.text))!;
+    const i = idx(opener.verseId);
+    expect(sentenceSpan(shabad568, opener.verseId)).toEqual([i, i + 1]);
+  });
+
+  it("leaves complete lines alone and never crosses a numbered verse marker", () => {
+    for (const v of shabad568.verses) {
+      const [start, end] = sentenceSpan(shabad568, v.verseId)!;
+      for (let j = start; j < end; j++) expect(shabad568.verses[j]!.gurmukhi).not.toMatch(/॥[੦-੯]+॥/);
+    }
+    const complete = shabad568.verses.find((v) => !startsMidSentence(v.translations[0]!.text) && !endsMidSentence(v.translations[0]!.text))!;
+    expect(sentenceSpan(shabad568, complete.verseId)).toEqual([idx(complete.verseId), idx(complete.verseId)]);
+  });
+
+  it("recognises mid-sentence translations", () => {
+    expect(startsMidSentence("forget to feel jealous of others. ||1||")).toBe(true);
+    expect(startsMidSentence("- they do not waver, here or hereafter. ||2||")).toBe(true);
+    expect(startsMidSentence("They see none other than the Lord.")).toBe(false);
+    expect(endsMidSentence("Those whose minds are imbued with the One Lord,")).toBe(true);
+    expect(endsMidSentence("chant the Name of the Lord, Har, Har")).toBe(true);
+    expect(endsMidSentence("The Creator is the Doer, the Cause of causes. ||1||Pause||")).toBe(false);
+    expect(endsMidSentence("Gauree, Fifth Mehla:")).toBe(false);
   });
 });

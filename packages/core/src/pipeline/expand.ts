@@ -27,6 +27,9 @@ Search terms:
 - Single English words only. No phrases, no Punjabi.
 - Prefer words those translations actually use. Modern words like "anxiety" or "jealousy" may appear rarely; add older equivalents ("worry", "anxious", "envy", "jealous", "fear", "ego", "pride", "attachment", "greed", "anger", "humility", "contentment", "Will", "Command", "Naam").
 - Avoid words so common they match thousands of lines ("Lord", "God", "mind", "Guru", "Name") unless the question is about them.
+- Avoid words Gurbani mostly uses as metaphor ("bride", "soul-bride", "husband", "wife", "ocean", "boat", "jewel") unless the question is about that imagery. Questions about real people and life (women, family, work, caste) need literal words.
+- Stay on the question's own topic; don't add loosely related concepts (e.g. "maya", "attachment") unless the question is about them.
+- 3-6 terms is usually best.
 
 If earlier conversation turns are given, use them only to understand what the latest question refers to.`;
 

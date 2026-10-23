@@ -15,9 +15,11 @@ standalone service so [GurdwaraOS](#gurdwaraos-integration) can use the same API
 ```
 question
  → expand (Haiku 5.5): category, Sikh concepts, English search terms
- → retrieve (BaniDB): English-translation search per term; one verse per shabad,
-     with neighbouring lines and the Rahao line for context
- → judge (Haiku 5.5): keep passages that genuinely address the question in context
+ → retrieve (BaniDB): English-translation search per term, whole-word matches only;
+     shabads ranked by how often they return to the terms (rarer terms count more);
+     best line per shabad, completed to a full sentence, plus neighbouring lines
+     and the Rahao line for context; top 20 go to the judge
+ → judge (Haiku 5.5): keep up to 3 passages that genuinely address the question in context
  → answer (Opus 5.5): cites passages as [[verse:ID]], never writes Gurmukhi
  → citation check: one rewrite if it fails, then strip anything still invalid
  → response: answer segments + passage cards built from BaniDB data
@@ -99,6 +101,11 @@ Verified against the live API (Oct 2026): no API key needed; verse-level
 Unicode Gurmukhi, Ang, shabad/verse IDs, writer, raag; English translations
 (`bdb`, `ssk`, `ms`), Punjabi teekas, transliterations; English-translation
 search (`searchtype=3`); Rehat Maryada endpoints.
+
+Learned the hard way: the English "full word" search (`searchtype=3`) actually
+matches substrings ("meat" finds "permeating") and returns results in Ang
+order. Retrieval therefore fetches up to 500 results per term, keeps only
+whole-word matches, and ranks shabads itself.
 
 To confirm with Khalis Foundation before launch:
 

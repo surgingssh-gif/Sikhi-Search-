@@ -1,7 +1,7 @@
 import type { BaniDbClient } from "../banidb/client";
 import { primaryEnglish } from "../banidb/normalize";
 import type { ChatTurn, JsonLlm, LlmUsage } from "../ai/llm";
-import { parseSegments, sanitizeAnswer, validateAnswer, type Segment } from "../citations/validate";
+import { findUncitedReferences, parseSegments, sanitizeAnswer, validateAnswer, type Segment } from "../citations/validate";
 import type { NamedRef, Source, Translation } from "../types";
 import { buildAnswerPrompt, correctionPrompt, generateAnswer, type GeneratedAnswer } from "./answer";
 import { expandQuestion, type Expansion } from "./expand";
@@ -13,18 +13,27 @@ export interface PipelineDeps {
   banidb: Pick<BaniDbClient, "searchTranslations" | "getShabad">;
 }
 
-/** A Gurbani passage ready to render as a card. All text comes from BaniDB. */
-export interface Passage {
+/** One line of a passage. All text comes from BaniDB. */
+export interface PassageLine {
   verseId: number;
-  shabadId: number;
   ang: number;
-  source: Source;
-  writer: NamedRef | null;
-  raag: NamedRef | null;
   gurmukhi: string;
   transliteration: string | null;
   translation: Translation | null;
   translations: Translation[];
+}
+
+/** A Gurbani passage ready to render as a card: one complete sentence, which may span lines. */
+export interface Passage {
+  /** The verse the answer cites. Always one of `lines`. */
+  verseId: number;
+  shabadId: number;
+  /** Ang of the cited verse. Lines can occasionally cross onto the next Ang; each line has its own. */
+  ang: number;
+  source: Source;
+  writer: NamedRef | null;
+  raag: NamedRef | null;
+  lines: PassageLine[];
   /** Why the passage was judged relevant (model-written commentary, not scripture). */
   relevanceNote: string;
 }
@@ -44,7 +53,13 @@ export interface AskResult {
   segments: Segment[];
   passages: Passage[];
   followUps: string[];
-  citationCheck: { passedFirstTime: boolean; retried: boolean; sanitized: boolean };
+  citationCheck: {
+    passedFirstTime: boolean;
+    retried: boolean;
+    sanitized: boolean;
+    /** Sentences that seem to draw on Gurbani that was not cited. Advisory, for reviewers. */
+    uncitedReferences: string[];
+  };
   usage: UsageSummary;
 }
 
@@ -102,7 +117,7 @@ export async function ask(deps: PipelineDeps, question: string, history: ChatTur
     segments: parseSegments(text),
     passages,
     followUps: answer.followUps.slice(0, 3),
-    citationCheck: { passedFirstTime, retried, sanitized },
+    citationCheck: { passedFirstTime, retried, sanitized, uncitedReferences: findUncitedReferences(text) },
     usage: summarize(steps),
   };
 }
@@ -139,10 +154,14 @@ function toPassage(j: JudgedCandidate): Passage {
     source: j.source,
     writer: j.writer,
     raag: j.raag,
-    gurmukhi: j.verse.gurmukhi,
-    transliteration: j.verse.transliteration,
-    translation: primaryEnglish(j.verse),
-    translations: j.verse.translations,
+    lines: j.lines.map((v) => ({
+      verseId: v.verseId,
+      ang: v.ang,
+      gurmukhi: v.gurmukhi,
+      transliteration: v.transliteration,
+      translation: primaryEnglish(v),
+      translations: v.translations,
+    })),
     relevanceNote: j.reason,
   };
 }

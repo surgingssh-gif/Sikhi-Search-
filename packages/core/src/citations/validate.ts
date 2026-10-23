@@ -87,6 +87,34 @@ export function validateAnswer(answer: string, retrieved: Iterable<Verse>): Cita
 }
 
 /**
+ * Phrases that usually mean the model is drawing on Gurbani it was not given
+ * ("elsewhere Gurbani says…"). Paraphrases can't be verified mechanically, so
+ * these are advisory: shown to reviewers, not used to reject an answer.
+ */
+const UNCITED_REFERENCE =
+  /\b(elsewhere|another shabad|other shabads|in another (?:line|bani|shabad|place)|a (?:famous|well-known|beloved) (?:line|shabad|tuk)|gurbani also (?:says|teaches|describes|warns|reminds)|as gurbani (?:says|puts it|teaches)|as the guru (?:says|writes|puts it))\b/i;
+
+export function findUncitedReferences(answer: string): string[] {
+  // A paragraph right before a citation introduces that card ("In another
+  // shabad, …" [[verse:1]]), so it isn't flagged. One after a card that says
+  // "elsewhere" points away from it, so it still is.
+  const segments = parseSegments(answer);
+  const unanchored: string[] = [];
+  segments.forEach((seg, i) => {
+    if (seg.type !== "text") return;
+    const paras = seg.text.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+    paras.forEach((p, j) => {
+      const introducesCard = j === paras.length - 1 && segments[i + 1]?.type === "citation";
+      if (!introducesCard) unanchored.push(p);
+    });
+  });
+  return unanchored
+    .flatMap((p) => p.split(/(?<=[.!?])\s+|\n+/))
+    .map((s) => s.trim())
+    .filter((s) => s && UNCITED_REFERENCE.test(s));
+}
+
+/**
  * Last-resort cleanup when a regenerated answer still breaks the contract:
  * drops unknown citation markers, model-written Gurmukhi and wrong Ang mentions.
  * Valid citation markers are left in place.

@@ -36,7 +36,7 @@ export async function judgeCandidates(
   llm: JsonLlm,
   question: string,
   candidates: Candidate[],
-  { minRelevance = 2, maxKeep = 5 } = {},
+  { minRelevance = 2, maxKeep = 3 } = {},
 ): Promise<{ kept: JudgedCandidate[]; all: JudgedCandidate[]; usage: LlmUsage | null }> {
   if (candidates.length === 0) return { kept: [], all: [], usage: null };
 

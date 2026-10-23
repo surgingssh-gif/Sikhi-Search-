@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeShabad, parseSegments, validateAnswer } from "../src";
+import { findUncitedReferences, normalizeShabad, parseSegments, validateAnswer } from "../src";
 import type { RawShabadResponse } from "../src/banidb/raw-types";
 import shabadFixture from "./fixtures/shabad-1.json";
 
@@ -48,5 +48,21 @@ describe("validateAnswer", () => {
 
   it("allows transliterated Sikh terms in Latin script", () => {
     expect(validateAnswer("Haumai and hukam are central ideas here.", verses).ok).toBe(true);
+  });
+});
+
+describe("findUncitedReferences", () => {
+  it("flags sentences that lean on Gurbani that wasn't cited", () => {
+    const text = `Ego blinds us. [[verse:${v1.verseId}]]\n\nMany Sikhs also recall a teaching found elsewhere in Gurbani: ego carries its own cure. Practise humility.`;
+    expect(findUncitedReferences(text)).toEqual(["Many Sikhs also recall a teaching found elsewhere in Gurbani: ego carries its own cure."]);
+  });
+
+  it("doesn't flag a sentence that introduces the card right after it", () => {
+    const text = `Intro. [[verse:${v1.verseId}]]\n\nIn another shabad, worry is forgotten.\n\n[[verse:${v2.verseId}]]\n\nClosing thought.`;
+    expect(findUncitedReferences(text)).toEqual([]);
+  });
+
+  it("leaves ordinary explanation alone", () => {
+    expect(findUncitedReferences(`My reading is that envy hurts the one who holds it. [[verse:${v1.verseId}]]`)).toEqual([]);
   });
 });

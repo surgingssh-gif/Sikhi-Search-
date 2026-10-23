@@ -3,9 +3,11 @@ import { normalizeSearch, normalizeShabad, type JsonLlm, type JsonRequest, type 
 import type { RawSearchResponse, RawShabadResponse } from "../src/banidb/raw-types";
 import searchFixture from "./fixtures/search-jealousy.json";
 import shabadFixture from "./fixtures/shabad-1.json";
+import shabad568Fixture from "./fixtures/shabad-568.json";
 
 export const searchResult = normalizeSearch("jealousy", searchFixture as unknown as RawSearchResponse);
 export const shabad1 = normalizeShabad(shabadFixture as unknown as RawShabadResponse);
+export const shabad568 = normalizeShabad(shabad568Fixture as unknown as RawShabadResponse);
 
 /** BaniDB stand-in: every search returns the recorded "jealousy" results; shabads come from the shabad-1 fixture. */
 export function fakeBanidb() {

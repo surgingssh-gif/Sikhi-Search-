@@ -7,6 +7,7 @@
  *   npm run eval -- --only hukam,anxiety  # specific question ids
  *   npm run eval -- --answer-model claude-sonnet-5-5
  *   npm run eval -- --mode explore        # Gurbani-first mode (no answer model)
+ *   npm run eval -- --concurrency 3       # run questions in parallel
  */
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -30,6 +31,7 @@ const { values } = parseArgs({
     "answer-model": { type: "string" },
     "fast-model": { type: "string" },
     mode: { type: "string", default: "ask" },
+    concurrency: { type: "string" },
   },
 });
 
@@ -56,17 +58,27 @@ type Outcome = { q: EvalQuestion; result?: AskResult | ExploreResult; error?: st
 const outcomes: Outcome[] = [];
 
 console.log(`Running ${questions.length} question(s), mode=${mode}, answer=${llm.models.answer}, fast=${llm.models.fast}`);
-for (const q of questions) {
-  const start = Date.now();
-  try {
-    const result = mode === "ask" ? await ask(deps, q.question) : await explore(deps, q.question);
-    outcomes.push({ q, result, ms: Date.now() - start });
-    console.log(`  ✓ ${q.id}  ${result.passages.length} passage(s)  $${result.usage.totalCostUsd.toFixed(4)}  ${((Date.now() - start) / 1000).toFixed(1)}s`);
-  } catch (err) {
-    outcomes.push({ q, error: (err as Error).message, ms: Date.now() - start });
-    console.log(`  ✗ ${q.id}  ${(err as Error).message}`);
-  }
-}
+const concurrency = Math.max(1, Number(values.concurrency ?? 1));
+let nextIndex = 0;
+const slots: Outcome[] = new Array(questions.length);
+await Promise.all(
+  Array.from({ length: Math.min(concurrency, questions.length) }, async () => {
+    while (nextIndex < questions.length) {
+      const i = nextIndex++;
+      const q = questions[i]!;
+      const start = Date.now();
+      try {
+        const result = mode === "ask" ? await ask(deps, q.question) : await explore(deps, q.question);
+        slots[i] = { q, result, ms: Date.now() - start };
+        console.log(`  ✓ ${q.id}  ${result.passages.length} passage(s)  $${result.usage.totalCostUsd.toFixed(4)}  ${((Date.now() - start) / 1000).toFixed(1)}s`);
+      } catch (err) {
+        slots[i] = { q, error: (err as Error).message, ms: Date.now() - start };
+        console.log(`  ✗ ${q.id}  ${(err as Error).message}`);
+      }
+    }
+  }),
+);
+outcomes.push(...slots);
 
 const ok = outcomes.filter((o) => o.result);
 const totalCost = ok.reduce((s, o) => s + o.result!.usage.totalCostUsd, 0);
@@ -112,7 +124,9 @@ function report(): string {
     const r = o.result;
     lines.push(`Category: \`${r.category}\` · ${(o.ms / 1000).toFixed(1)}s · $${r.usage.totalCostUsd.toFixed(4)}`);
     if ("answer" in r) {
-      lines.push(`Basis: \`${r.basis}\`${r.sourceLabel ? ` · Label: _${r.sourceLabel}_` : ""} · Citation check: ${JSON.stringify(r.citationCheck)}`, ``);
+      const { uncitedReferences, ...check } = r.citationCheck;
+      lines.push(`Basis: \`${r.basis}\`${r.sourceLabel ? ` · Label: _${r.sourceLabel}_` : ""} · ${wordCount(r)} words · Citation check: ${JSON.stringify(check)}`, ``);
+      if (uncitedReferences.length) lines.push(`> ⚠️ Possible uncited Gurbani: ${uncitedReferences.map((s) => `"${s}"`).join(" ")}`, ``);
       const byId = new Map(r.passages.map((p) => [p.verseId, p]));
       for (const seg of r.segments) {
         if (seg.type === "text") lines.push(seg.text);
@@ -129,15 +143,20 @@ function report(): string {
 
 function card(p: Passage | undefined): string {
   if (!p) return "\n> (missing passage)\n";
+  const angs = [...new Set(p.lines.map((l) => l.ang))].join("–");
   return [
     ``,
-    `> **${p.gurmukhi}**  `,
-    p.transliteration ? `> _${p.transliteration}_  ` : "",
-    `> ${p.translation?.text ?? "(no translation)"}  `,
-    `> — ${p.source.english}, Ang ${p.ang}${p.writer ? `, ${p.writer.english}` : ""} · shabad ${p.shabadId} · translation: ${p.translation?.attribution ?? "n/a"}  `,
+    `> **${p.lines.map((l) => l.gurmukhi).join(" ")}**  `,
+    p.lines.some((l) => l.transliteration) ? `> _${p.lines.map((l) => l.transliteration ?? "").join(" ")}_  ` : "",
+    `> ${p.lines.map((l) => l.translation?.text ?? "(no translation)").join(" ")}  `,
+    `> — ${p.source.english}, Ang ${angs}${p.writer ? `, ${p.writer.english}` : ""} · shabad ${p.shabadId} · ${p.lines.length} line(s) · translation: ${p.lines[0]?.translation?.attribution ?? "n/a"}  `,
     `> _Why selected: ${p.relevanceNote}_`,
     ``,
   ]
     .filter(Boolean)
     .join("\n");
+}
+
+export function wordCount(r: AskResult): number {
+  return r.segments.filter((s) => s.type === "text").map((s) => (s.type === "text" ? s.text : "")).join(" ").split(/\s+/).filter(Boolean).length;
 }

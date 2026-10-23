@@ -7,8 +7,8 @@ Gurbani from [BaniDB](https://api.banidb.com/v2/api-docs/) (Khalis Foundation),
 with exact Gurmukhi, Ang numbers, translations and attribution. It runs as a
 standalone service so [GurdwaraOS](#gurdwaraos-integration) can use the same API later.
 
-> Status: **Phase 2 (answer pipeline)**. `/v1/ask` and `/v1/explore` work
-> end to end; answers still need review against the evaluation set. No website yet.
+> Status: **Phase 3 (website)**. The website, `/v1/ask` and `/v1/explore` work
+> end to end; answers still need review by Sikh educators before any public launch.
 
 ## How a question is answered
 
@@ -20,7 +20,7 @@ question
      best line per shabad, completed to a full sentence, plus neighbouring lines
      and the Rahao line for context; top 20 go to the judge
  → judge (Haiku 5.5): keep up to 3 passages that genuinely address the question in context
- → answer (Opus 5.5): cites passages as [[verse:ID]], never writes Gurmukhi
+ → answer (Sonnet 5.5 by default; Opus 5.5 via ANSWER_MODEL): cites passages as [[verse:ID]], never writes Gurmukhi
  → citation check: one rewrite if it fails, then strip anything still invalid
  → response: answer segments + passage cards built from BaniDB data
 ```
@@ -50,7 +50,7 @@ Invented quotations are blocked by how the system is built, not by prompt wordin
 ```
 packages/core   Framework-free logic: BaniDB client, Gurbani types, citation validation
 apps/api        Hono HTTP API (the service the website and GurdwaraOS call)
-apps/web        (Phase 3) Next.js website
+apps/web        Next.js website: landing page, conversation, Gurbani cards, shabad reader
 ```
 
 ## Getting started
@@ -60,7 +60,8 @@ Requires Node 22+.
 ```bash
 npm install
 cp .env.example .env   # then add your ANTHROPIC_API_KEY
-npm run dev:api        # http://localhost:8787
+npm run dev:api        # API on http://localhost:8787
+npm run dev:web        # website on http://localhost:3000 (in a second terminal)
 npm test               # no API key or network needed
 npm run typecheck
 ```
@@ -73,7 +74,7 @@ would expect in `expectedShabadIds`; never guess these.
 
 ```bash
 npm run eval -- --limit 3                          # costs real money; prints the estimate
-npm run eval -- --answer-model claude-sonnet-5-5   # compare models
+npm run eval -- --answer-model claude-opus-5-5     # compare models
 npm run eval -- --mode explore
 ```
 
@@ -85,7 +86,7 @@ Reports land in `evals/results/` (git-ignored) as Markdown for review.
 |---|---|---|
 | GET | `/v1/health` | Liveness check |
 | GET | `/v1/shabads/:id` | Full shabad: Gurmukhi, larivaar, transliteration, attributed translations, Ang, writer, raag, prev/next |
-| POST | `/v1/ask` | `{ question, history? }` → answer, segments, passages, follow-ups, basis, sourceLabel, usage |
+| POST | `/v1/ask` | `{ question, history? }` → answer, segments, passages, follow-ups, basis, sourceLabel, usage. Send `Accept: text/event-stream` for `stage` progress events then a `result` (or `error`) event |
 | POST | `/v1/explore` | `{ question }` → relevant passages with relevance notes |
 
 The server stores no conversations; clients send earlier turns in `history`.
@@ -118,8 +119,8 @@ To confirm with Khalis Foundation before launch:
 ## Roadmap
 
 1. **Foundation**: BaniDB client, shabad API, citation checker *(done)*
-2. **Answer pipeline**: concept expansion → BaniDB search → relevance judging → answer → citation check; Explore mode; evaluation set *(built; first eval run and model comparison pending)*
-3. **Website**: landing page, chat, Gurbani cards, full shabad reader
+2. **Answer pipeline**: concept expansion → BaniDB search → relevance judging → answer → citation check; Explore mode; evaluation set *(done; Sonnet 5.5 chosen over Opus 5.5 at ~40% of the cost)*
+3. **Website**: landing page, chat with live progress, Gurbani cards, full shabad reader with text size and translator choice, light/dark, mobile *(done)*
 4. **Semantic index**: pgvector index (after Khalis approval), hybrid search
 5. **Review and launch**: review by Sikh educators, rate limits, privacy, then GurdwaraOS integration
 

@@ -1,4 +1,6 @@
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
+import { streamSSE } from "hono/streaming";
+import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { cors } from "hono/cors";
 import { z } from "zod";
 import {
@@ -9,6 +11,7 @@ import {
   LlmRefusalError,
   type BaniDbClient,
   type JsonLlm,
+  type Stage,
 } from "@ask-sikhi/core";
 import { rateLimit } from "./rate-limit";
 
@@ -54,36 +57,59 @@ export function createApp({ banidb, llm, allowedOrigins = [], aiRequestsPerMinut
 
   const aiLimit = rateLimit({ limit: aiRequestsPerMinute, windowMs: 60_000 });
 
+  /**
+   * With `Accept: text/event-stream` the response is Server-Sent Events:
+   * `stage` events ({ stage }) as the pipeline progresses, then one `result`
+   * (the same JSON as the plain response) or one `error` ({ error, message? }).
+   */
+  function respond(c: Context, run: (onStage: (s: Stage) => void) => Promise<object>) {
+    if (!(c.req.header("accept") ?? "").includes("text/event-stream")) {
+      return run(() => {}).then((result) => c.json({ ...result, attribution: GURBANI_ATTRIBUTION }));
+    }
+    return streamSSE(c, async (stream) => {
+      try {
+        const result = await run((stage) => void stream.writeSSE({ event: "stage", data: JSON.stringify({ stage }) }));
+        await stream.writeSSE({ event: "result", data: JSON.stringify({ ...result, attribution: GURBANI_ATTRIBUTION }) });
+      } catch (err) {
+        await stream.writeSSE({ event: "error", data: JSON.stringify(errorResponse(err).body) });
+      }
+    });
+  }
+
   app.post("/v1/ask", aiLimit, async (c) => {
     if (!llm) return c.json({ error: "ai_not_configured" }, 503);
     const body = AskBody.safeParse(await c.req.json().catch(() => null));
     if (!body.success) return c.json({ error: "invalid_request", issues: body.error.issues }, 400);
-    const result = await ask({ llm, banidb }, body.data.question, body.data.history ?? []);
-    return c.json({ ...result, attribution: GURBANI_ATTRIBUTION });
+    const { question, history = [] } = body.data;
+    return respond(c, (onStage) => ask({ llm, banidb }, question, history, { onStage }));
   });
 
   app.post("/v1/explore", aiLimit, async (c) => {
     if (!llm) return c.json({ error: "ai_not_configured" }, 503);
     const body = ExploreBody.safeParse(await c.req.json().catch(() => null));
     if (!body.success) return c.json({ error: "invalid_request", issues: body.error.issues }, 400);
-    const result = await explore({ llm, banidb }, body.data.question);
-    return c.json({ ...result, attribution: GURBANI_ATTRIBUTION });
+    return respond(c, (onStage) => explore({ llm, banidb }, body.data.question, { onStage }));
   });
 
   app.notFound((c) => c.json({ error: "not_found" }, 404));
 
   app.onError((err, c) => {
-    if (err instanceof BaniDbNotFoundError) return c.json({ error: "not_found", message: err.message }, 404);
-    if (err instanceof BaniDbError) {
-      console.error("BaniDB error:", err.message);
-      return c.json({ error: "upstream_unavailable" }, 502);
-    }
-    if (err instanceof LlmRefusalError) {
-      return c.json({ error: "declined", message: "This question can't be answered here." }, 422);
-    }
-    console.error(err);
-    return c.json({ error: "internal_error" }, 500);
+    const { status, body } = errorResponse(err);
+    return c.json(body, status);
   });
 
   return app;
+}
+
+function errorResponse(err: unknown): { status: ContentfulStatusCode; body: { error: string; message?: string } } {
+  if (err instanceof BaniDbNotFoundError) return { status: 404, body: { error: "not_found", message: err.message } };
+  if (err instanceof BaniDbError) {
+    console.error("BaniDB error:", err.message);
+    return { status: 502, body: { error: "upstream_unavailable" } };
+  }
+  if (err instanceof LlmRefusalError) {
+    return { status: 422, body: { error: "declined", message: "This question can't be answered here." } };
+  }
+  console.error(err);
+  return { status: 500, body: { error: "internal_error" } };
 }

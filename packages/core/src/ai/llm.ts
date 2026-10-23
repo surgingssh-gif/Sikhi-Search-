@@ -60,7 +60,7 @@ export interface AnthropicJsonLlmOptions {
 
 export const DEFAULT_MODELS: Record<ModelTier, string> = {
   fast: "claude-haiku-5-5",
-  answer: "claude-opus-5-5",
+  answer: "claude-sonnet-5-5",
 };
 
 const EFFORT: Record<ModelTier, "low" | "medium"> = { fast: "low", answer: "medium" };

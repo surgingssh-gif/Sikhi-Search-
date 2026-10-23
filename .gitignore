@@ -7,3 +7,6 @@ dist/
 coverage/
 *.log
 evals/results/
+.next/
+next-env.d.ts
+*.tsbuildinfo

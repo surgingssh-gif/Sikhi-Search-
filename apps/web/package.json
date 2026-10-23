@@ -1,0 +1,26 @@
+{
+  "name": "@ask-sikhi/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Ask Sikhi website: conversational answers, Gurbani cards and a full shabad reader.",
+  "scripts": {
+    "dev": "next dev --port 3000",
+    "build": "next build",
+    "start": "next start --port 3000",
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "next": "^16.4.3",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-markdown": "^10.1.0"
+  },
+  "devDependencies": {
+    "@ask-sikhi/core": "*",
+    "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "typescript": "^7.0.2"
+  }
+}

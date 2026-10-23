@@ -77,17 +77,33 @@ export const HISTORY_LABEL = "Historical details here are general knowledge, not
 const MAX_QUESTION_CHARS = 500;
 const MAX_HISTORY_TURNS = 6;
 
-export async function ask(deps: PipelineDeps, question: string, history: ChatTurn[] = []): Promise<AskResult> {
+/** Pipeline stages, in order, for progress indicators. */
+export type Stage = "understanding" | "searching" | "reading" | "writing" | "checking";
+
+export interface PipelineOptions {
+  /** Called as each stage starts. */
+  onStage?: (stage: Stage) => void;
+}
+
+export async function ask(
+  deps: PipelineDeps,
+  question: string,
+  history: ChatTurn[] = [],
+  options: PipelineOptions = {},
+): Promise<AskResult> {
   const q = question.trim().slice(0, MAX_QUESTION_CHARS);
   const steps: LlmUsage[] = [];
   const recent = history.slice(-MAX_HISTORY_TURNS);
+  const stage = options.onStage ?? (() => {});
 
-  const { expansion, judged } = await findPassages(deps, q, recent, steps);
+  const { expansion, judged } = await findPassages(deps, q, recent, steps, stage);
 
+  stage("writing");
   const messages: ChatTurn[] = [...recent, { role: "user", content: buildAnswerPrompt(q, expansion, judged) }];
   let { answer, usage } = await generateAnswer(deps.llm, messages);
   steps.push(usage);
 
+  stage("checking");
   let report = validateAnswer(answer.answer, judged.map((j) => j.verse));
   const passedFirstTime = report.ok;
   let retried = false;
@@ -123,17 +139,20 @@ export async function ask(deps: PipelineDeps, question: string, history: ChatTur
 }
 
 /** Explore mode: Gurbani first, with only a short relevance note per passage. No answer-model call. */
-export async function explore(deps: PipelineDeps, question: string): Promise<ExploreResult> {
+export async function explore(deps: PipelineDeps, question: string, options: PipelineOptions = {}): Promise<ExploreResult> {
   const q = question.trim().slice(0, MAX_QUESTION_CHARS);
   const steps: LlmUsage[] = [];
-  const { expansion, judged } = await findPassages(deps, q, [], steps);
+  const { expansion, judged } = await findPassages(deps, q, [], steps, options.onStage ?? (() => {}));
   return { question: q, category: expansion.category, passages: judged.map(toPassage), usage: summarize(steps) };
 }
 
-async function findPassages(deps: PipelineDeps, q: string, history: ChatTurn[], steps: LlmUsage[]) {
+async function findPassages(deps: PipelineDeps, q: string, history: ChatTurn[], steps: LlmUsage[], stage: (s: Stage) => void) {
+  stage("understanding");
   const { expansion, usage } = await expandQuestion(deps.llm, q, history);
   steps.push(usage);
+  stage("searching");
   const candidates = await retrieveCandidates(deps.banidb, expansion.searchTerms);
+  stage("reading");
   const judgement = await judgeCandidates(deps.llm, q, candidates);
   if (judgement.usage) steps.push(judgement.usage);
   return { expansion, judged: judgement.kept };

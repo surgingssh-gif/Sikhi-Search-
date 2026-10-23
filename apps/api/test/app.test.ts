@@ -63,6 +63,29 @@ describe("POST /v1/ask and /v1/explore", () => {
     expect(json.sourceLabel).toBeTruthy();
   });
 
+  it("streams progress stages then the result when asked for event-stream", async () => {
+    const app = createApp({ banidb: banidbWith(async () => shabad), llm });
+    const res = await app.request("/v1/ask", post("/v1/ask", { question: "Why do Sikhs wear a dastaar?" }, { accept: "text/event-stream" }));
+    expect(res.headers.get("content-type")).toContain("text/event-stream");
+    const text = await res.text();
+    const events = [...text.matchAll(/event: (\w+)\ndata: (.*)\n/g)].map((m) => ({ event: m[1], data: JSON.parse(m[2]!) }));
+    expect(events.filter((e) => e.event === "stage").map((e) => e.data.stage)).toEqual([
+      "understanding",
+      "searching",
+      "reading",
+      "writing",
+      "checking",
+    ]);
+    expect(events.at(-1)).toMatchObject({ event: "result", data: { basis: "general_knowledge", attribution: GURBANI_ATTRIBUTION } });
+  });
+
+  it("reports pipeline failures as an error event when streaming", async () => {
+    const failing: JsonLlm = { completeJson: async () => Promise.reject(new Error("boom")) };
+    const app = createApp({ banidb: banidbWith(async () => shabad), llm: failing });
+    const res = await app.request("/v1/ask", post("/v1/ask", { question: "What is Hukam?" }, { accept: "text/event-stream" }));
+    expect(await res.text()).toContain('event: error\ndata: {"error":"internal_error"}');
+  });
+
   it("validates the question", async () => {
     const app = createApp({ banidb: banidbWith(async () => shabad), llm });
     expect((await app.request("/v1/ask", post("/v1/ask", { question: "" }))).status).toBe(400);

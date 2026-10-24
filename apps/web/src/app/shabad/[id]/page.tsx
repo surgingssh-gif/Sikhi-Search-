@@ -8,7 +8,7 @@ type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ verse?: 
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const shabad = await getShabad(Number((await params).id)).catch(() => null);
-  return { title: shabad ? `Ang ${shabad.ang} · ${shabad.writer?.english ?? shabad.source.english} · Ask Sikhi` : "Shabad · Ask Sikhi" };
+  return { title: shabad ? `Ang ${shabad.ang} · ${shabad.writer?.english ?? shabad.source.english}` : "Shabad" };
 }
 
 export default async function ShabadPage({ params, searchParams }: Props) {
@@ -35,11 +35,11 @@ export default async function ShabadPage({ params, searchParams }: Props) {
           {shabad.source.english}
           {shabad.raag && <> · {shabad.raag.english}</>} · Shabad {shabad.shabadId}
         </p>
-        <p style={{ margin: "14px 0 0" }}>
+        <div className="reader-actions">
           <Link className="btn-primary" href={`/discuss/${shabad.shabadId}`}>
             Discuss this shabad
           </Link>
-        </p>
+        </div>
       </header>
       <ShabadReader shabad={shabad} highlightVerseId={verse} />
       <nav className="reader-nav" aria-label="Neighbouring shabads">

@@ -7,7 +7,7 @@ type Props = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const shabad = await getShabad(Number((await params).id)).catch(() => null);
-  return { title: shabad ? `Discuss Ang ${shabad.ang} · Ask Sikhi` : "Discuss Gurbani · Ask Sikhi" };
+  return { title: shabad ? `Discuss Ang ${shabad.ang}` : "Discuss Gurbani" };
 }
 
 export default async function DiscussShabadPage({ params }: Props) {

@@ -1,8 +1,30 @@
 import type { AskResult, ExploreResult, Segment } from "@/lib/api";
 import { CitedProse as Prose } from "./CitedProse";
+import { CopyButton } from "./CopyButton";
 import { GurbaniCard } from "./GurbaniCard";
 
 const cardId = (prefix: string, n: number) => `${prefix}-p${n}`;
+
+/** Plain-text version for copying: the answer with [n] markers, then each passage with its Ang. */
+function answerAsText(r: AskResult): string {
+  const n = new Map(r.passages.map((p, i) => [p.verseId, i + 1]));
+  const text = (segs: Segment[]) => segs.map((s) => (s.type === "text" ? s.text : `[${n.get(s.verseId)}]`)).join("");
+  const parts = [r.question, "", text(r.summary)];
+  for (const s of r.sections) parts.push("", s.title, text(s.segments));
+  if (r.passages.length) {
+    parts.push("", "Gurbani");
+    r.passages.forEach((p, i) => {
+      const angs = [...new Set(p.lines.map((l) => l.ang))].join("–");
+      parts.push(
+        `[${i + 1}] ${p.lines.map((l) => l.gurmukhi).join(" ")}`,
+        `    ${p.lines.map((l) => l.translation?.text ?? "").join(" ")}`,
+        `    ${p.source.english}, Ang ${angs}${p.writer ? `, ${p.writer.english}` : ""}`,
+      );
+    });
+  }
+  parts.push("", "From Ask Sikhi. Gurbani from BaniDB by Khalis Foundation.");
+  return parts.join("\n");
+}
 
 /** Citation chips numbered by passage, linking to the Gurbani cards. */
 function CitedProse({ segments, numbers, prefix, inline = false }: { segments: Segment[]; numbers: Map<number, number>; prefix: string; inline?: boolean }) {
@@ -47,12 +69,10 @@ export function AnswerView({
   return (
     <>
       <section className="answer-card" aria-label="Answer">
-        <p className="answer-label">
-          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <path d="M8 1.5 9.6 6.4 14.5 8 9.6 9.6 8 14.5 6.4 9.6 1.5 8l4.9-1.6Z" fill="currentColor" />
-          </svg>
-          Answer
-        </p>
+        <div className="answer-head">
+          <p className="answer-label">Answer</p>
+          <CopyButton text={() => answerAsText(result)} />
+        </div>
         <p className="summary">
           <CitedProse segments={result.summary} numbers={numbers} prefix={prefix} inline />
         </p>

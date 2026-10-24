@@ -75,9 +75,9 @@ export interface ExploreResult {
   usage: UsageSummary;
 }
 
-export const GENERAL_KNOWLEDGE_LABEL = "General knowledge: not verified against Sikh sources.";
-export const PARTLY_GENERAL_LABEL = "Parts of this answer are general knowledge, not verified against Sikh sources.";
-export const HISTORY_LABEL = "Historical details here are general knowledge, not verified against Sikh sources.";
+export const GENERAL_KNOWLEDGE_LABEL = "This answer draws on history and general knowledge, not on Gurbani passages.";
+export const PARTLY_GENERAL_LABEL = "Parts of this answer draw on general knowledge beyond the Gurbani shown.";
+export const HISTORY_LABEL = "Historical details come from documented history, not from Gurbani. For specifics, see trusted Sikh historical sources.";
 
 const MAX_QUESTION_CHARS = 500;
 const MAX_HISTORY_TURNS = 6;

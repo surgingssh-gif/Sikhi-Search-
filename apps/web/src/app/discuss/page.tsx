@@ -4,7 +4,7 @@ import { AngPicker } from "@/components/AngPicker";
 import { getHukamnama } from "@/lib/api";
 import { englishOf, openingLines } from "@/lib/shabad";
 
-export const metadata: Metadata = { title: "Discuss Gurbani · Ask Sikhi" };
+export const metadata: Metadata = { title: "Discuss Gurbani" };
 
 function formatDate(iso: string): string {
   const [y, m, d] = iso.split("-").map(Number);
@@ -18,7 +18,8 @@ export default async function DiscussHome() {
   return (
     <main className="wrap">
       <section className="hero">
-        <h1>Discuss Gurbani</h1>
+        <p className="eyebrow">Discuss Gurbani</p>
+        <h1>Talk through a shabad</h1>
         <p>Choose a shabad and talk it through: what it means, what the Rahao line says, and how it speaks to your life.</p>
       </section>
 

@@ -69,3 +69,27 @@ export interface SearchResult {
   totalPages: number;
   hits: SearchHit[];
 }
+
+export interface Hukamnama {
+  /** YYYY-MM-DD, as BaniDB dates it. */
+  date: string;
+  /** Usually one shabad; occasionally more. */
+  shabads: Shabad[];
+}
+
+export interface AngShabad {
+  shabadId: number;
+  /** A section heading the shabad opens with on this Ang, e.g. "Shalok, First Mehla". */
+  heading: string | null;
+  /** First line of text (not a heading) on this Ang, if any. */
+  firstLine: Verse | null;
+  /** Lines of this shabad that fall on the Ang. */
+  lineCount: number;
+  writer: NamedRef | null;
+  raag: NamedRef | null;
+}
+
+export interface AngContents {
+  ang: number;
+  shabads: AngShabad[];
+}

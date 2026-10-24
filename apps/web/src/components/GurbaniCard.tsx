@@ -52,12 +52,17 @@ export function GurbaniCard({
           {meta}
           {attribution && <> · Translation: {attribution}</>}
         </span>
-        <Link className="read-link" href={`/shabad/${passage.shabadId}?verse=${passage.verseId}`}>
-          Read full shabad
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <path d="M6 3.5 10.5 8 6 12.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </Link>
+        <span className="card-links">
+          <Link className="read-link" href={`/discuss/${passage.shabadId}`}>
+            Discuss
+          </Link>
+          <Link className="read-link" href={`/shabad/${passage.shabadId}?verse=${passage.verseId}`}>
+            Read full shabad
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M6 3.5 10.5 8 6 12.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </Link>
+        </span>
       </figcaption>
     </figure>
   );

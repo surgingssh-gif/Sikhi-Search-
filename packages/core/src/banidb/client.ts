@@ -1,7 +1,7 @@
-import type { SearchResult, Shabad, SourceId } from "../types";
+import type { AngContents, AngShabad, Hukamnama, SearchResult, Shabad, SourceId } from "../types";
 import { BaniDbError, BaniDbNotFoundError } from "./errors";
-import { normalizeSearch, normalizeShabad } from "./normalize";
-import type { RawErrorResponse, RawSearchResponse, RawShabadResponse } from "./raw-types";
+import { isHeadingVerse, normalizeSearch, normalizeShabad, normalizeVerse, primaryEnglish } from "./normalize";
+import type { RawAngResponse, RawErrorResponse, RawHukamnamaResponse, RawSearchResponse, RawShabadResponse } from "./raw-types";
 
 export interface BaniDbClientOptions {
   baseUrl?: string;
@@ -20,6 +20,7 @@ export interface SearchOptions {
 
 /** BaniDB `searchtype` values we use (see /v2/api-docs). */
 const SEARCH_TYPE_ENGLISH_TRANSLATION = 3;
+const HUKAMNAMA_TTL_MS = 15 * 60 * 1000;
 
 interface CacheEntry {
   expires: number;
@@ -64,7 +65,51 @@ export class BaniDbClient {
     return normalizeSearch(q, raw);
   }
 
-  private async getJson<T>(path: string): Promise<T> {
+  /**
+   * Today's Hukamnama from Sri Harmandir Sahib, as BaniDB publishes it.
+   * Cached briefly (not for a day) so it changes over at midnight.
+   */
+  async getHukamnamaToday(): Promise<Hukamnama> {
+    const raw = await this.getJson<RawHukamnamaResponse>("/hukamnamas/today", HUKAMNAMA_TTL_MS);
+    const d = raw.date?.gregorian;
+    if (!d || !raw.shabads?.length) throw new BaniDbError("BaniDB returned no Hukamnama for today");
+    return {
+      date: `${d.year}-${String(d.month).padStart(2, "0")}-${String(d.date).padStart(2, "0")}`,
+      shabads: raw.shabads.map(normalizeShabad),
+    };
+  }
+
+  /** The shabads that appear on one Ang, each with its first line. */
+  async getAng(ang: number, source: SourceId = "G"): Promise<AngContents> {
+    if (!Number.isInteger(ang) || ang < 1 || (source === "G" && ang > 1430)) {
+      throw new BaniDbNotFoundError(`Invalid Ang: ${ang}`);
+    }
+    const raw = await this.getJson<RawAngResponse>(`/angs/${ang}/${source}`);
+    const byShabad = new Map<number, AngShabad>();
+    for (const v of raw.page ?? []) {
+      const verse = normalizeVerse(v, ang);
+      const heading = isHeadingVerse(verse);
+      const entry = byShabad.get(v.shabadId);
+      if (entry) {
+        entry.lineCount++;
+        // Replace a heading ("Pauree:") with the first line of actual text.
+        if (entry.heading !== null && entry.firstLine === null && !heading) entry.firstLine = verse;
+        continue;
+      }
+      byShabad.set(v.shabadId, {
+        shabadId: v.shabadId,
+        heading: heading ? (primaryEnglish(verse)?.text.replace(/:\s*$/, "") ?? null) : null,
+        firstLine: heading ? null : verse,
+        lineCount: 1,
+        writer: v.writer?.english ? { id: v.writer.writerId, english: v.writer.english, gurmukhi: v.writer.unicode ?? null } : null,
+        raag: v.raag?.english ? { id: v.raag.raagId, english: v.raag.english, gurmukhi: v.raag.unicode ?? null } : null,
+      });
+    }
+    if (byShabad.size === 0) throw new BaniDbNotFoundError(`Ang ${ang} not found`);
+    return { ang, shabads: [...byShabad.values()] };
+  }
+
+  private async getJson<T>(path: string, ttlMs = this.cacheTtlMs): Promise<T> {
     const cached = this.cache.get(path);
     if (cached && cached.expires > Date.now()) {
       // Refresh recency so the map behaves as an LRU.
@@ -91,7 +136,7 @@ export class BaniDbClient {
       throw new BaniDbError(errorText(body) ?? `BaniDB returned HTTP ${res.status}`, res.status);
     }
 
-    this.cache.set(path, { expires: Date.now() + this.cacheTtlMs, value: body });
+    this.cache.set(path, { expires: Date.now() + ttlMs, value: body });
     while (this.cache.size > this.maxCacheEntries) {
       const oldest = this.cache.keys().next().value;
       if (oldest === undefined) break;

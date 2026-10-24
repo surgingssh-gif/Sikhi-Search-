@@ -5,7 +5,12 @@ import shabadFixture from "../../../packages/core/test/fixtures/shabad-1.json";
 
 const shabad = normalizeShabad(shabadFixture as unknown as RawShabadResponse);
 const emptySearch = async (query: string) => ({ query, totalResults: 0, page: 0, totalPages: 0, hits: [] });
-const banidbWith = (getShabad: (id: number) => Promise<typeof shabad>) => ({ getShabad, searchTranslations: emptySearch });
+const banidbWith = (getShabad: (id: number) => Promise<typeof shabad>) => ({
+  getShabad,
+  searchTranslations: emptySearch,
+  getHukamnamaToday: async () => ({ date: "2026-10-24", shabads: [shabad] }),
+  getAng: async (ang: number) => ({ ang, shabads: [] }),
+});
 
 const post = (path: string, body: unknown, headers: Record<string, string> = {}) =>
   ({ method: "POST", headers: { "content-type": "application/json", ...headers }, body: JSON.stringify(body) }) as const;
@@ -107,6 +112,43 @@ describe("POST /v1/ask and /v1/explore", () => {
     expect(limited.status).toBe(429);
     expect(limited.headers.get("retry-after")).toBeTruthy();
     expect((await send("2.2.2.2")).status).toBe(200);
+  });
+});
+
+describe("Discuss Gurbani routes", () => {
+  const discussLlm: JsonLlm = {
+    completeJson: async (req) => ({
+      data: req.schema.parse({ reply: "This shabad is about trust.", followUps: [] }),
+      usage: { step: req.step, model: "fake", inputTokens: 1, outputTokens: 1, cacheReadTokens: 0, cacheWriteTokens: 0, costUsd: 0 },
+    }),
+  };
+
+  it("returns today's Hukamnama", async () => {
+    const app = createApp({ banidb: banidbWith(async () => shabad) });
+    const res = await app.request("/v1/hukamnama/today");
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ date: "2026-10-24", shabads: [{ shabadId: shabad.shabadId }], attribution: GURBANI_ATTRIBUTION });
+  });
+
+  it("validates Ang numbers", async () => {
+    const app = createApp({ banidb: banidbWith(async () => shabad) });
+    expect((await app.request("/v1/angs/0")).status).toBe(400);
+    expect((await app.request("/v1/angs/1431")).status).toBe(400);
+    expect((await app.request("/v1/angs/abc")).status).toBe(400);
+    expect((await app.request("/v1/angs/473")).status).toBe(200);
+  });
+
+  it("discusses a shabad", async () => {
+    const app = createApp({ banidb: banidbWith(async () => shabad), llm: discussLlm });
+    const res = await app.request("/v1/discuss", post("/v1/discuss", { shabadId: 1, question: "What is this about?" }));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ shabadId: 1, answer: "This shabad is about trust." });
+  });
+
+  it("requires a shabad id and a question", async () => {
+    const app = createApp({ banidb: banidbWith(async () => shabad), llm: discussLlm });
+    expect((await app.request("/v1/discuss", post("/v1/discuss", { question: "What is this about?" }))).status).toBe(400);
+    expect((await app.request("/v1/discuss", post("/v1/discuss", { shabadId: 1 }))).status).toBe(400);
   });
 });
 

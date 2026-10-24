@@ -7,6 +7,7 @@ export {
   normalizeSearch,
   normalizeVerse,
   primaryEnglish,
+  isHeadingVerse,
   TRANSLATION_ATTRIBUTIONS,
   ENGLISH_PREFERENCE,
 } from "./banidb/normalize";
@@ -26,3 +27,4 @@ export {
   type CitationReport,
   type Segment,
 } from "./citations/validate";
+export { discuss, describeShabad, DISCUSS_SYSTEM, DiscussSchema, type DiscussResult } from "./pipeline/discuss";

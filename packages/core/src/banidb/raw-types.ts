@@ -71,3 +71,12 @@ export interface RawErrorResponse {
   error: true;
   data?: { error?: string };
 }
+
+export interface RawHukamnamaResponse {
+  date?: { gregorian?: { year: number; month: number; date: number } };
+  shabads?: RawShabadResponse[];
+}
+
+export interface RawAngResponse {
+  page?: RawVerse[];
+}

@@ -30,6 +30,11 @@ export interface JsonRequest<S extends z.ZodType> {
   tier: ModelTier;
   /** Stable instructions. Cached, so keep it free of per-request values. */
   system: string;
+  /**
+   * Reference material that stays the same for a whole conversation (e.g. the
+   * shabad being discussed). Sent as a second, separately cached system block.
+   */
+  context?: string;
   messages: ChatTurn[];
   schema: S;
   maxTokens?: number;
@@ -86,7 +91,10 @@ export class AnthropicJsonLlm implements JsonLlm {
     const response = await this.client.beta.messages.parse({
       model,
       max_tokens: req.maxTokens ?? 16000,
-      system: [{ type: "text", text: req.system, cache_control: { type: "ephemeral" } }],
+      system: [
+        { type: "text", text: req.system, cache_control: { type: "ephemeral" } },
+        ...(req.context ? [{ type: "text" as const, text: req.context, cache_control: { type: "ephemeral" as const } }] : []),
+      ],
       messages: req.messages,
       output_config: { effort: EFFORT[req.tier], format: betaZodOutputFormat(req.schema) },
       ...(fallback ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const } : {}),

@@ -1,6 +1,8 @@
-import type { Mode, Stage } from "@/lib/api";
+import type { Stage } from "@/lib/api";
 
-const STEPS: { stage: Stage; label: string }[] = [
+type ProgressMode = "ask" | "explore" | "discuss";
+
+const ASK_STEPS: { stage: Stage; label: string }[] = [
   { stage: "understanding", label: "Understanding your question" },
   { stage: "searching", label: "Searching Gurbani" },
   { stage: "reading", label: "Reading shabads in context" },
@@ -8,8 +10,14 @@ const STEPS: { stage: Stage; label: string }[] = [
   { stage: "checking", label: "Checking every citation" },
 ];
 
-export function Progress({ mode, current }: { mode: Mode; current: Stage | null }) {
-  const steps = mode === "explore" ? STEPS.slice(0, 3) : STEPS;
+const DISCUSS_STEPS: { stage: Stage; label: string }[] = [
+  { stage: "reading", label: "Reading the shabad" },
+  { stage: "writing", label: "Thinking it through" },
+  { stage: "checking", label: "Checking line references" },
+];
+
+export function Progress({ mode, current }: { mode: ProgressMode; current: Stage | null }) {
+  const steps = mode === "discuss" ? DISCUSS_STEPS : mode === "explore" ? ASK_STEPS.slice(0, 3) : ASK_STEPS;
   const currentIndex = current ? steps.findIndex((s) => s.stage === current) : 0;
   return (
     <ol className="progress" aria-live="polite">

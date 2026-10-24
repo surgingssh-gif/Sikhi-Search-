@@ -37,6 +37,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               Ask Sikhi
             </Link>
             <nav className="header-actions" aria-label="Site">
+              <Link href="/discuss" className="header-link">
+                Discuss
+              </Link>
               <Link href="/about" className="header-link">
                 About
               </Link>

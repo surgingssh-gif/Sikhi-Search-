@@ -141,3 +141,13 @@ export function normalizeSearch(query: string, raw: RawSearchResponse): SearchRe
 export function primaryEnglish(verse: Verse): Translation | null {
   return verse.translations.find((t) => t.language === "en") ?? null;
 }
+
+/**
+ * Section headings such as "Pauree:" or "Dhanaasaree, Fourth Mehla:" rather
+ * than lines of Gurbani. The website uses the same rule (apps/web/src/lib/shabad.ts)
+ * so line numbers match what the model sees.
+ */
+export function isHeadingVerse(v: Verse): boolean {
+  const t = primaryEnglish(v)?.text.trim() ?? "";
+  return t.length > 0 && t.length < 60 && t.endsWith(":");
+}

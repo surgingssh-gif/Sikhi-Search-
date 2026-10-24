@@ -7,6 +7,7 @@ import {
   ask,
   BaniDbError,
   BaniDbNotFoundError,
+  discuss,
   explore,
   LlmRefusalError,
   type BaniDbClient,
@@ -16,7 +17,7 @@ import {
 import { rateLimit } from "./rate-limit";
 
 export interface AppDeps {
-  banidb: Pick<BaniDbClient, "getShabad" | "searchTranslations">;
+  banidb: Pick<BaniDbClient, "getShabad" | "searchTranslations" | "getHukamnamaToday" | "getAng">;
   /** Absent when no model credentials are configured; AI endpoints then return 503. */
   llm?: JsonLlm;
   allowedOrigins?: string[];
@@ -38,6 +39,8 @@ const AskBody = z.object({
 
 const ExploreBody = AskBody.pick({ question: true });
 
+const DiscussBody = AskBody.extend({ shabadId: z.number().int().positive() });
+
 export function createApp({ banidb, llm, allowedOrigins = [], aiRequestsPerMinute = 10 }: AppDeps) {
   const app = new Hono();
 
@@ -53,6 +56,22 @@ export function createApp({ banidb, llm, allowedOrigins = [], aiRequestsPerMinut
     const shabad = await banidb.getShabad(id);
     c.header("cache-control", "public, max-age=3600");
     return c.json({ shabad, attribution: GURBANI_ATTRIBUTION });
+  });
+
+  app.get("/v1/hukamnama/today", async (c) => {
+    const hukamnama = await banidb.getHukamnamaToday();
+    c.header("cache-control", "public, max-age=600");
+    return c.json({ ...hukamnama, attribution: GURBANI_ATTRIBUTION });
+  });
+
+  app.get("/v1/angs/:ang", async (c) => {
+    const ang = Number(c.req.param("ang"));
+    if (!Number.isInteger(ang) || ang < 1 || ang > 1430) {
+      return c.json({ error: "invalid_ang", message: "Sri Guru Granth Sahib Ji has Angs 1 to 1430." }, 400);
+    }
+    const contents = await banidb.getAng(ang);
+    c.header("cache-control", "public, max-age=3600");
+    return c.json({ ...contents, attribution: GURBANI_ATTRIBUTION });
   });
 
   const aiLimit = rateLimit({ limit: aiRequestsPerMinute, windowMs: 60_000 });
@@ -89,6 +108,14 @@ export function createApp({ banidb, llm, allowedOrigins = [], aiRequestsPerMinut
     const body = ExploreBody.safeParse(await c.req.json().catch(() => null));
     if (!body.success) return c.json({ error: "invalid_request", issues: body.error.issues }, 400);
     return respond(c, (onStage) => explore({ llm, banidb }, body.data.question, { onStage }));
+  });
+
+  app.post("/v1/discuss", aiLimit, async (c) => {
+    if (!llm) return c.json({ error: "ai_not_configured" }, 503);
+    const body = DiscussBody.safeParse(await c.req.json().catch(() => null));
+    if (!body.success) return c.json({ error: "invalid_request", issues: body.error.issues }, 400);
+    const { shabadId, question, history = [] } = body.data;
+    return respond(c, (onStage) => discuss({ llm, banidb }, shabadId, question, history, { onStage }));
   });
 
   app.notFound((c) => c.json({ error: "not_found" }, 404));

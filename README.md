@@ -88,6 +88,9 @@ Reports land in `evals/results/` (git-ignored) as Markdown for review.
 | GET | `/v1/shabads/:id` | Full shabad: Gurmukhi, larivaar, transliteration, attributed translations, Ang, writer, raag, prev/next |
 | POST | `/v1/ask` | `{ question, history? }` → summary (main paragraph), sections (deeper detail), passages (Gurbani cards), follow-ups, basis, sourceLabel, usage. Send `Accept: text/event-stream` for `stage` progress events then a `result` (or `error`) event |
 | POST | `/v1/explore` | `{ question }` → relevant passages with relevance notes |
+| POST | `/v1/discuss` | `{ shabadId, question, history? }` → a reply about that shabad, citing its lines; follow-ups |
+| GET | `/v1/hukamnama/today` | Today's Hukamnama (date and shabad), cached 10 minutes |
+| GET | `/v1/angs/:ang` | The shabads on an Ang (1-1430), each with its heading and first line |
 
 The server stores no conversations; clients send earlier turns in `history`.
 AI endpoints are rate limited per client (`AI_REQUESTS_PER_MINUTE`, default 10).

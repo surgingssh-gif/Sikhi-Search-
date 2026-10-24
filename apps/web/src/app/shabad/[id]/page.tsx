@@ -35,6 +35,11 @@ export default async function ShabadPage({ params, searchParams }: Props) {
           {shabad.source.english}
           {shabad.raag && <> · {shabad.raag.english}</>} · Shabad {shabad.shabadId}
         </p>
+        <p style={{ margin: "14px 0 0" }}>
+          <Link className="btn-primary" href={`/discuss/${shabad.shabadId}`}>
+            Discuss this shabad
+          </Link>
+        </p>
       </header>
       <ShabadReader shabad={shabad} highlightVerseId={verse} />
       <nav className="reader-nav" aria-label="Neighbouring shabads">

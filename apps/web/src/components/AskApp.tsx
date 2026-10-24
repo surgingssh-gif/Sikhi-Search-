@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { askStream, friendlyError, type AskResult, type ChatTurn, type ExploreResult, type Mode, type Stage } from "@/lib/api";
 import { AnswerView, ExploreView } from "./AnswerView";
@@ -53,6 +54,7 @@ function Check() {
 }
 
 export function AskApp() {
+  const router = useRouter();
   const [exchanges, setExchanges] = useState<Exchange[]>([]);
   const [draft, setDraft] = useState("");
   const [mode, setMode] = useState<Mode>("ask");
@@ -136,7 +138,10 @@ export function AskApp() {
             Ask
           </button>
           <button type="button" aria-pressed={mode === "explore"} onClick={() => setMode("explore")}>
-            Explore Gurbani
+            Explore
+          </button>
+          <button type="button" aria-pressed={false} onClick={() => router.push("/discuss")}>
+            Discuss
           </button>
         </div>
         <button className="send" type="submit" disabled={busy || draft.trim().length < 3} aria-label="Send">

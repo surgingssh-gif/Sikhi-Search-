@@ -1,39 +1,18 @@
-import ReactMarkdown from "react-markdown";
 import type { AskResult, ExploreResult, Segment } from "@/lib/api";
+import { CitedProse as Prose } from "./CitedProse";
 import { GurbaniCard } from "./GurbaniCard";
-
-/** Model-written prose is rendered as Markdown with raw HTML disabled (react-markdown's default). */
-const ALLOWED = ["p", "strong", "em", "ul", "ol", "li", "br"];
 
 const cardId = (prefix: string, n: number) => `${prefix}-p${n}`;
 
-/**
- * Prose with citation markers turned into numbered chips that jump to the
- * matching Gurbani card. Text and chips are joined into one Markdown string
- * with placeholder links so paragraphs and lists still render correctly.
- */
+/** Citation chips numbered by passage, linking to the Gurbani cards. */
 function CitedProse({ segments, numbers, prefix, inline = false }: { segments: Segment[]; numbers: Map<number, number>; prefix: string; inline?: boolean }) {
-  const md = segments.map((s) => (s.type === "text" ? s.text : `[${numbers.get(s.verseId) ?? "?"}](#cite-${s.verseId})`)).join("");
   return (
-    <ReactMarkdown
-      allowedElements={[...ALLOWED, "a"]}
-      unwrapDisallowed
-      components={{
-        p: inline ? ({ children }) => <>{children}</> : "p",
-        a: ({ href, children }) => {
-          // Only our own citation placeholders become links; any other link the model wrote is shown as plain text.
-          const n = href?.startsWith("#cite-") ? numbers.get(Number(href.slice(6))) : undefined;
-          if (!n) return <>{children}</>;
-          return (
-            <a className="cite" href={`#${cardId(prefix, n)}`} aria-label={`Gurbani passage ${n}`}>
-              {children}
-            </a>
-          );
-        },
-      }}
-    >
-      {md}
-    </ReactMarkdown>
+    <Prose
+      segments={segments}
+      inline={inline}
+      label={(id) => numbers.get(id)}
+      href={(id) => `#${cardId(prefix, numbers.get(id) ?? 0)}`}
+    />
   );
 }
 
@@ -45,7 +24,7 @@ function Chevron() {
   );
 }
 
-function Arrow() {
+export function Arrow() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
       <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />

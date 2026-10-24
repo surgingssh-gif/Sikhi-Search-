@@ -1,7 +1,7 @@
 /*
  * Newspaper aesthetic, after "The Morning Brief": paper and ink, a blackletter
  * nameplate, Source Serif for reading, Libre Franklin for labels and UI, thin
- * hairlines and double rules. One accent colour (saffron) for callouts.
+ * hairlines and double rules. One accent colour (its blue) for callouts.
  */
 
 :root {
@@ -13,8 +13,8 @@
   --muted: #6b6a66;
   --hair: #dcdad3;
   --rule: #121212;
-  --accent: #c2630f;
-  --accent-wash: rgb(194 99 15 / 0.09);
+  --accent: #2a78d6;
+  --accent-wash: rgb(42 120 214 / 0.1);
   --danger: #c23b3a;
   --danger-wash: rgb(227 73 72 / 0.1);
 
@@ -37,8 +37,8 @@
     --muted: #9a9890;
     --hair: #2e2e2b;
     --rule: #f2f1ec;
-    --accent: #ef9a45;
-    --accent-wash: rgb(239 154 69 / 0.13);
+    --accent: #3987e5;
+    --accent-wash: rgb(57 135 229 / 0.16);
     --danger: #e66767;
     --danger-wash: rgb(230 103 103 / 0.16);
   }
@@ -53,8 +53,8 @@
   --muted: #9a9890;
   --hair: #2e2e2b;
   --rule: #f2f1ec;
-  --accent: #ef9a45;
-  --accent-wash: rgb(239 154 69 / 0.13);
+  --accent: #3987e5;
+  --accent-wash: rgb(57 135 229 / 0.16);
   --danger: #e66767;
   --danger-wash: rgb(230 103 103 / 0.16);
 }

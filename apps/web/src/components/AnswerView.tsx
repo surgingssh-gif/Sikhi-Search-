@@ -13,22 +13,13 @@ function Prose({ text }: { text: string }) {
   );
 }
 
-function InfoIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.4" />
-      <path d="M8 7.2v3.6M8 5.1v.1" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-    </svg>
-  );
-}
-
 export function AnswerView({ result, onFollowUp }: { result: AskResult; onFollowUp: (q: string) => void }) {
   const byId = new Map(result.passages.map((p) => [p.verseId, p]));
   return (
     <div className="a">
       {result.sourceLabel && (
-        <p className="source-label">
-          <InfoIcon />
+        <p className="self-check">
+          <strong>Note:</strong>
           {result.sourceLabel}
         </p>
       )}
@@ -41,11 +32,11 @@ export function AnswerView({ result, onFollowUp }: { result: AskResult; onFollow
       </div>
       {result.followUps.length > 0 && (
         <div className="followups">
-          <h4>Continue exploring</h4>
-          <ul className="suggestions">
+          <p className="news-kicker">Continue exploring</p>
+          <ul className="index">
             {result.followUps.map((f) => (
               <li key={f}>
-                <button type="button" className="chip" onClick={() => onFollowUp(f)}>
+                <button type="button" onClick={() => onFollowUp(f)}>
                   {f}
                 </button>
               </li>

@@ -82,9 +82,18 @@ export function AskApp() {
         void submit(draft);
       }}
     >
+      <div className="tabs" role="group" aria-label="Answer style">
+        <button type="button" aria-pressed={mode === "ask"} onClick={() => setMode("ask")}>
+          Ask
+        </button>
+        <button type="button" aria-pressed={mode === "explore"} onClick={() => setMode("explore")}>
+          Explore Gurbani
+        </button>
+      </div>
       <label htmlFor="question" className="sr-only">
         Your question
       </label>
+      <div className="composer-row">
       <textarea
         id="question"
         ref={textarea}
@@ -112,19 +121,9 @@ export function AskApp() {
           }
         }}
       />
-      <div className="composer-row">
-        <div className="modes" role="group" aria-label="Answer style">
-          <button type="button" aria-pressed={mode === "ask"} onClick={() => setMode("ask")}>
-            Ask
-          </button>
-          <button type="button" aria-pressed={mode === "explore"} onClick={() => setMode("explore")}>
-            Explore Gurbani
-          </button>
-        </div>
-        <button className="send" type="submit" disabled={busy || draft.trim().length < 3} aria-label="Send question">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <path d="M8 13V3M8 3 3.5 7.5M8 3l4.5 4.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+        <button className="send" type="submit" disabled={busy || draft.trim().length < 3}>
+          {mode === "ask" ? "Ask" : "Explore"}
+          <span aria-hidden="true">→</span>
         </button>
       </div>
     </form>
@@ -133,37 +132,46 @@ export function AskApp() {
   if (!started) {
     return (
       <main className="wrap">
-        <section className="hero">
-          <p className="eyebrow">Learn · Reflect · Explore</p>
-          <h1>Ask a question. Discover the Gurbani behind the answer.</h1>
-          <p className="lede">
+        <section className="lead">
+          <p className="kicker">Sikhi · Gurbani · Everyday life</p>
+          <h1 className="headline">Ask a question. Discover the Gurbani behind the answer.</h1>
+          <p className="dek">
             Ask Sikhi helps you explore Sikh teachings through conversation. Every Gurbani line it shows comes from BaniDB, with its
             Ang and translator named, so you can read it in its full shabad.
           </p>
+          <p className="byline">
+            By <strong>Ask Sikhi</strong> · Gurbani from BaniDB by Khalis Foundation · Explanations by Claude
+          </p>
         </section>
         {composer}
-        <ul className="suggestions" aria-label="Suggested questions">
-          {SUGGESTED.map((s) => (
-            <li key={s}>
-              <button type="button" className="chip" onClick={() => void submit(s)}>
-                {s}
-              </button>
-            </li>
-          ))}
-        </ul>
-        <section className="principles" aria-label="How Ask Sikhi works">
-          <div>
-            <h2>Real Gurbani only</h2>
-            <p>The AI never writes Gurbani. Every line is shown exactly as it appears in BaniDB.</p>
-          </div>
-          <div>
-            <h2>Read it in context</h2>
-            <p>Each passage links to its full shabad, so no line stands alone.</p>
-          </div>
-          <div>
-            <h2>A guide, not an authority</h2>
-            <p>Explanations are labelled as interpretation, and different Sikh views are named.</p>
-          </div>
+        <aside className="sixty" aria-label="How Ask Sikhi works">
+          <p className="sixty-label">How it works</p>
+          <dl>
+            <div className="sixty-row">
+              <dt>Real Gurbani only</dt>
+              <dd>The AI never writes Gurbani. Every line is shown exactly as it appears in BaniDB.</dd>
+            </div>
+            <div className="sixty-row">
+              <dt>Read it in context</dt>
+              <dd>Each passage names its Ang and translator, and links to the full shabad.</dd>
+            </div>
+            <div className="sixty-row">
+              <dt>A guide, not an authority</dt>
+              <dd>Explanations are marked as interpretation, and differing Sikh views are named.</dd>
+            </div>
+          </dl>
+        </aside>
+        <section className="suggest" aria-label="Suggested questions">
+          <p className="news-kicker">Try asking</p>
+          <ul className="index">
+            {SUGGESTED.map((s) => (
+              <li key={s}>
+                <button type="button" onClick={() => void submit(s)}>
+                  {s}
+                </button>
+              </li>
+            ))}
+          </ul>
         </section>
       </main>
     );
@@ -174,10 +182,10 @@ export function AskApp() {
       <div className="thread">
         {exchanges.map((x) => (
           <section key={x.id} className="exchange" aria-label={`Question: ${x.question}`}>
-            <p className="q">
-              {x.mode === "explore" && <span className="q-mode">Explore Gurbani</span>}
-              {x.question}
-            </p>
+            <header className="q">
+              <p className="kicker">{x.mode === "explore" ? "Explore Gurbani" : "Your question"}</p>
+              <h2>{x.question}</h2>
+            </header>
             <div>
               {x.error ? (
                 <div className="error" role="alert">

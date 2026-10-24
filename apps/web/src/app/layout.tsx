@@ -1,10 +1,13 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Inter, Noto_Serif_Gurmukhi } from "next/font/google";
+import { Libre_Franklin, Noto_Serif_Gurmukhi, Source_Serif_4, UnifrakturMaguntia } from "next/font/google";
 import Link from "next/link";
+import { ThemeToggle, THEME_SCRIPT } from "@/components/ThemeToggle";
+import { Today } from "@/components/Today";
 import "./globals.css";
 
-const sans = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
-const serif = Fraunces({ subsets: ["latin"], variable: "--font-serif", display: "swap" });
+const sans = Libre_Franklin({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
+const serif = Source_Serif_4({ subsets: ["latin"], variable: "--font-serif", display: "swap", style: ["normal", "italic"] });
+const blackletter = UnifrakturMaguntia({ subsets: ["latin"], weight: "400", variable: "--font-blackletter", display: "swap" });
 const gurmukhi = Noto_Serif_Gurmukhi({ subsets: ["gurmukhi"], variable: "--font-gurmukhi", display: "swap" });
 
 export const metadata: Metadata = {
@@ -14,34 +17,50 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#fbf8f1" },
-    { media: "(prefers-color-scheme: dark)", color: "#0e131d" },
+    { media: "(prefers-color-scheme: light)", color: "#fbfaf7" },
+    { media: "(prefers-color-scheme: dark)", color: "#161615" },
   ],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${sans.variable} ${serif.variable} ${gurmukhi.variable}`}>
+    <html
+      lang="en"
+      className={`${sans.variable} ${serif.variable} ${blackletter.variable} ${gurmukhi.variable}`}
+      suppressHydrationWarning
+    >
+      <head>
+        {/* Apply a saved light/dark choice before first paint. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body>
-        <header className="site-header">
-          <div className="wrap">
-            <Link href="/" className="wordmark">
-              <span className="wordmark-dot" aria-hidden="true" />
-              Ask Sikhi
-            </Link>
-            <a className="header-link" href="https://www.banidb.com" target="_blank" rel="noreferrer">
+        <header className="wrap">
+          <div className="topbar">
+            <a className="topbar-left" href="https://www.banidb.com" target="_blank" rel="noreferrer">
+              <span className="live-dot" aria-hidden="true" />
               Gurbani from BaniDB
             </a>
+            <ThemeToggle />
+          </div>
+          <p className="nameplate">
+            <Link href="/">Ask Sikhi</Link>
+          </p>
+          <div className="dateline">
+            <span>Learn · Reflect · Explore</span>
+            <Today />
+            <span>A learning tool, not a religious authority.</span>
           </div>
         </header>
         {children}
         <footer className="site-footer">
           <div className="wrap">
-            <p>
-              Ask Sikhi is a learning tool, not a religious authority. For guidance on your own path, speak with a Granthi,
-              a teacher you trust, or your sangat.
-            </p>
-            <p>Gurbani text, translations and transliterations from BaniDB by Khalis Foundation.</p>
+            <div>
+              <p>
+                Ask Sikhi is a learning tool, not a religious authority. For guidance on your own path, speak with a Granthi, a
+                teacher you trust, or your sangat.
+              </p>
+              <p>Gurbani text, translations and transliterations from BaniDB by Khalis Foundation.</p>
+            </div>
           </div>
         </footer>
       </body>

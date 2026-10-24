@@ -24,12 +24,17 @@ export default async function ShabadPage({ params, searchParams }: Props) {
         <Link href="/" className="back-link">
           ← Back to Ask Sikhi
         </Link>
-        <h1>{shabad.source.english}</h1>
-        <p className="reader-meta">
-          Ang {shabad.ang}
-          {shabad.writer && <> · {shabad.writer.english}</>}
-          {shabad.raag && <> · {shabad.raag.english}</>}
-          {" · "}Shabad {shabad.shabadId}
+        <p className="kicker">
+          {shabad.source.english} · Ang {shabad.ang}
+        </p>
+        <h1 className="headline">{shabad.writer?.english ?? shabad.source.english}</h1>
+        <p className="byline">
+          {shabad.raag && (
+            <>
+              <strong>{shabad.raag.english}</strong> ·{" "}
+            </>
+          )}
+          Shabad {shabad.shabadId} · Gurbani from BaniDB by Khalis Foundation
         </p>
       </header>
       <ShabadReader shabad={shabad} highlightVerseId={verse} />

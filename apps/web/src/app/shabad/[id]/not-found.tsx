@@ -7,8 +7,8 @@ export default function ShabadNotFound() {
         <Link href="/" className="back-link">
           ← Back to Ask Sikhi
         </Link>
-        <h1>Shabad not found</h1>
-        <p className="reader-meta">BaniDB has no shabad with that number.</p>
+        <h1 className="headline" style={{ marginTop: 18 }}>Shabad not found</h1>
+        <p className="dek">BaniDB has no shabad with that number.</p>
       </header>
     </main>
   );

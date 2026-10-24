@@ -10,10 +10,14 @@ export function GurbaniCard({ passage, showNote = false }: { passage: Passage; s
   const { lines } = passage;
   const angs = [...new Set(lines.map((l) => l.ang))].join("–");
   const attribution = lines[0]?.translation?.attribution;
-  const meta = [passage.source.english, passage.writer?.english, passage.raag?.english].filter(Boolean).join(" · ");
+  const meta = [passage.writer?.english, passage.raag?.english].filter(Boolean).join(" · ");
 
   return (
     <figure className="card">
+      <p className="card-source">
+        <span>{passage.source.english}</span>
+        <span className="ang">Ang {angs}</span>
+      </p>
       <p className="gurmukhi" lang="pa">
         {lines.map((l, i) => (
           <span key={l.verseId}>
@@ -26,13 +30,13 @@ export function GurbaniCard({ passage, showNote = false }: { passage: Passage; s
       <p className="translation">{lines.map((l) => l.translation?.text ?? "").join(" ")}</p>
       {showNote && passage.relevanceNote && (
         <p className="ai-note">
-          <b>Why this passage</b>
+          <b>Why this passage:</b>
           {passage.relevanceNote}
         </p>
       )}
       <figcaption className="card-meta">
         <span>
-          <span className="ang">Ang {angs}</span> · {meta}
+          {meta && <strong>{meta}</strong>}
           {attribution && <> · Translation: {attribution}</>}
         </span>
         <Link className="read-link" href={`/shabad/${passage.shabadId}?verse=${passage.verseId}`}>

@@ -22,19 +22,18 @@ export default async function ShabadPage({ params, searchParams }: Props) {
     <main className="wrap">
       <header className="reader-head">
         <Link href="/" className="back-link">
-          ← Back to Ask Sikhi
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M10 3.5 5.5 8l4.5 4.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          Back
         </Link>
-        <p className="kicker">
-          {shabad.source.english} · Ang {shabad.ang}
-        </p>
-        <h1 className="headline">{shabad.writer?.english ?? shabad.source.english}</h1>
-        <p className="byline">
-          {shabad.raag && (
-            <>
-              <strong>{shabad.raag.english}</strong> ·{" "}
-            </>
-          )}
-          Shabad {shabad.shabadId} · Gurbani from BaniDB by Khalis Foundation
+        <h1>
+          Ang {shabad.ang}
+          {shabad.writer && <> · {shabad.writer.english}</>}
+        </h1>
+        <p className="reader-meta">
+          {shabad.source.english}
+          {shabad.raag && <> · {shabad.raag.english}</>} · Shabad {shabad.shabadId}
         </p>
       </header>
       <ShabadReader shabad={shabad} highlightVerseId={verse} />

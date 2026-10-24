@@ -3,7 +3,7 @@ import { primaryEnglish } from "../banidb/normalize";
 import type { ChatTurn, JsonLlm, LlmUsage } from "../ai/llm";
 import { findUncitedReferences, parseSegments, sanitizeAnswer, validateAnswer, type Segment } from "../citations/validate";
 import type { NamedRef, Source, Translation } from "../types";
-import { buildAnswerPrompt, correctionPrompt, generateAnswer, type GeneratedAnswer } from "./answer";
+import { answerText, buildAnswerPrompt, correctionPrompt, generateAnswer, type GeneratedAnswer } from "./answer";
 import { expandQuestion, type Expansion } from "./expand";
 import { judgeCandidates, type JudgedCandidate } from "./judge";
 import { retrieveCandidates } from "./retrieve";
@@ -49,8 +49,13 @@ export interface AskResult {
   basis: GeneratedAnswer["basis"];
   /** Shown above the answer when parts of it are not verified against sources. */
   sourceLabel: string | null;
+  /** The main answer paragraph, with inline citation markers split out. */
+  summary: Segment[];
+  /** Optional deeper sections shown below the Gurbani. */
+  sections: { title: string; segments: Segment[] }[];
+  /** All answer text as one string (summary then sections), for conversation history and reports. */
   answer: string;
-  segments: Segment[];
+  /** Every cited passage, in order of first citation. */
   passages: Passage[];
   followUps: string[];
   citationCheck: {
@@ -104,7 +109,7 @@ export async function ask(
   steps.push(usage);
 
   stage("checking");
-  let report = validateAnswer(answer.answer, judged.map((j) => j.verse));
+  let report = validateAnswer(answerText(answer), judged.map((j) => j.verse));
   const passedFirstTime = report.ok;
   let retried = false;
   if (!report.ok) {
@@ -116,10 +121,16 @@ export async function ask(
     ]);
     steps.push(retry.usage);
     answer = retry.answer;
-    report = validateAnswer(answer.answer, judged.map((j) => j.verse));
+    report = validateAnswer(answerText(answer), judged.map((j) => j.verse));
   }
   const sanitized = !report.ok;
-  const text = sanitized ? sanitizeAnswer(answer.answer, report) : answer.answer;
+  const clean = (t: string) => (sanitized ? sanitizeAnswer(t, report) : t.trim());
+  const summary = clean(answer.summary);
+  const sections = answer.sections
+    .slice(0, 3)
+    .map((s) => ({ title: s.title.trim(), body: clean(s.body) }))
+    .filter((s) => s.title && s.body);
+  const text = answerText({ summary, sections });
 
   const byId = new Map(judged.map((j) => [j.verse.verseId, j]));
   const passages = report.cited.map((id) => toPassage(byId.get(id)!));
@@ -129,8 +140,9 @@ export async function ask(
     category: expansion.category,
     basis: answer.basis,
     sourceLabel: labelFor(expansion.category, answer.basis),
+    summary: parseSegments(summary),
+    sections: sections.map((s) => ({ title: s.title, segments: parseSegments(s.body) })),
     answer: text,
-    segments: parseSegments(text),
     passages,
     followUps: answer.followUps.slice(0, 3),
     citationCheck: { passedFirstTime, retried, sanitized, uncitedReferences: findUncitedReferences(text) },

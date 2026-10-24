@@ -16,7 +16,7 @@ export * from "./pipeline/ask";
 export { expandQuestion, ExpansionSchema, type Expansion } from "./pipeline/expand";
 export { retrieveCandidates, describeCandidate, type Candidate } from "./pipeline/retrieve";
 export { judgeCandidates, type JudgedCandidate } from "./pipeline/judge";
-export { ANSWER_SYSTEM, AnswerSchema, type GeneratedAnswer } from "./pipeline/answer";
+export { ANSWER_SYSTEM, AnswerSchema, answerText, type GeneratedAnswer } from "./pipeline/answer";
 export {
   validateAnswer,
   sanitizeAnswer,

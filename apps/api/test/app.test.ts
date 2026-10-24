@@ -48,7 +48,7 @@ describe("POST /v1/ask and /v1/explore", () => {
       data: req.schema.parse(
         req.step === "expand"
           ? { category: "practice", concepts: [], searchTerms: ["dastaar"] }
-          : { answer: "A dastaar is...", basis: "general_knowledge", followUps: [] },
+          : { summary: "A dastaar is...", sections: [], basis: "general_knowledge", followUps: [] },
       ),
       usage: { step: req.step, model: "fake", inputTokens: 1, outputTokens: 1, cacheReadTokens: 0, cacheWriteTokens: 0, costUsd: 0 },
     }),

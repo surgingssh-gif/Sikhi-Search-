@@ -127,11 +127,13 @@ function report(): string {
       const { uncitedReferences, ...check } = r.citationCheck;
       lines.push(`Basis: \`${r.basis}\`${r.sourceLabel ? ` · Label: _${r.sourceLabel}_` : ""} · ${wordCount(r)} words · Citation check: ${JSON.stringify(check)}`, ``);
       if (uncitedReferences.length) lines.push(`> ⚠️ Possible uncited Gurbani: ${uncitedReferences.map((s) => `"${s}"`).join(" ")}`, ``);
-      const byId = new Map(r.passages.map((p) => [p.verseId, p]));
-      for (const seg of r.segments) {
-        if (seg.type === "text") lines.push(seg.text);
-        else lines.push(card(byId.get(seg.verseId)));
-      }
+      // Same order as the website: main answer, the Gurbani cards, then the deeper sections.
+      const ref = new Map(r.passages.map((p, i) => [p.verseId, i + 1]));
+      const prose = (segs: AskResult["summary"]) =>
+        segs.map((s) => (s.type === "text" ? s.text : `[${ref.get(s.verseId) ?? "?"}]`)).join("");
+      lines.push(`**Answer:** ${prose(r.summary)}`, ``);
+      r.passages.forEach((p, i) => lines.push(`**[${i + 1}]**`, card(p)));
+      for (const s of r.sections) lines.push(`#### ${s.title}`, ``, prose(s.segments), ``);
       if (r.followUps.length) lines.push(``, `Follow-ups: ${r.followUps.map((f) => `"${f}"`).join(", ")}`);
     } else {
       for (const p of r.passages) lines.push(card(p));
@@ -158,5 +160,10 @@ function card(p: Passage | undefined): string {
 }
 
 export function wordCount(r: AskResult): number {
-  return r.segments.filter((s) => s.type === "text").map((s) => (s.type === "text" ? s.text : "")).join(" ").split(/\s+/).filter(Boolean).length;
+  return [r.summary, ...r.sections.map((s) => s.segments)]
+    .flat()
+    .map((s) => (s.type === "text" ? s.text : ""))
+    .join(" ")
+    .split(/\s+/)
+    .filter(Boolean).length;
 }

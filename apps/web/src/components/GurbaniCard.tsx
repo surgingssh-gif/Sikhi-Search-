@@ -6,18 +6,31 @@ import type { Passage } from "@/lib/api";
  * API; the only model-written text is the optional relevance note, which is
  * labelled as such.
  */
-export function GurbaniCard({ passage, showNote = false }: { passage: Passage; showNote?: boolean }) {
+export function GurbaniCard({
+  passage,
+  number,
+  id,
+  showNote = false,
+}: {
+  passage: Passage;
+  number?: number;
+  id?: string;
+  showNote?: boolean;
+}) {
   const { lines } = passage;
   const angs = [...new Set(lines.map((l) => l.ang))].join("–");
   const attribution = lines[0]?.translation?.attribution;
   const meta = [passage.writer?.english, passage.raag?.english].filter(Boolean).join(" · ");
 
   return (
-    <figure className="card">
-      <p className="card-source">
-        <span>{passage.source.english}</span>
+    <figure className="card" id={id}>
+      <div className="card-top">
+        <span>
+          {number !== undefined && <span className="num">{number}</span>}
+          {passage.source.english}
+        </span>
         <span className="ang">Ang {angs}</span>
-      </p>
+      </div>
       <p className="gurmukhi" lang="pa">
         {lines.map((l, i) => (
           <span key={l.verseId}>
@@ -34,13 +47,16 @@ export function GurbaniCard({ passage, showNote = false }: { passage: Passage; s
           {passage.relevanceNote}
         </p>
       )}
-      <figcaption className="card-meta">
+      <figcaption className="card-foot">
         <span>
-          {meta && <strong>{meta}</strong>}
+          {meta}
           {attribution && <> · Translation: {attribution}</>}
         </span>
         <Link className="read-link" href={`/shabad/${passage.shabadId}?verse=${passage.verseId}`}>
-          Read full shabad →
+          Read full shabad
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M6 3.5 10.5 8 6 12.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
         </Link>
       </figcaption>
     </figure>

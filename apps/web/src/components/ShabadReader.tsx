@@ -63,7 +63,7 @@ export function ShabadReader({ shabad, highlightVerseId }: { shabad: Shabad; hig
 
   return (
     <>
-      <div className="reader-controls">
+      <div className="toolbar">
         <span className="size-buttons" role="group" aria-label="Gurmukhi text size">
           <button type="button" onClick={() => set({ size: prefs.size - 1 })} disabled={prefs.size === 0} aria-label="Smaller text">
             A−

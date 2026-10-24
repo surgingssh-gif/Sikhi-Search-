@@ -86,7 +86,7 @@ Reports land in `evals/results/` (git-ignored) as Markdown for review.
 |---|---|---|
 | GET | `/v1/health` | Liveness check |
 | GET | `/v1/shabads/:id` | Full shabad: Gurmukhi, larivaar, transliteration, attributed translations, Ang, writer, raag, prev/next |
-| POST | `/v1/ask` | `{ question, history? }` → answer, segments, passages, follow-ups, basis, sourceLabel, usage. Send `Accept: text/event-stream` for `stage` progress events then a `result` (or `error`) event |
+| POST | `/v1/ask` | `{ question, history? }` → summary (main paragraph), sections (deeper detail), passages (Gurbani cards), follow-ups, basis, sourceLabel, usage. Send `Accept: text/event-stream` for `stage` progress events then a `result` (or `error`) event |
 | POST | `/v1/explore` | `{ question }` → relevant passages with relevance notes |
 
 The server stores no conversations; clients send earlier turns in `history`.

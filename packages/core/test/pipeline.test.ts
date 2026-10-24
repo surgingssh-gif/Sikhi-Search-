@@ -5,14 +5,19 @@ import { expansion, fakeBanidb, fakeLlm, judgeAll, searchResult, shabad1, shabad
 
 const [hitA, hitB] = searchResult.hits.map((h) => h.verse) as [(typeof searchResult.hits)[0]["verse"], (typeof searchResult.hits)[0]["verse"]];
 
-const answer = (text: string, basis = "gurbani") => ({ answer: text, basis, followUps: ["What is haumai?", "How does Naam help?"] });
+const answer = (summary: string, basis = "gurbani", sections: { title: string; body: string }[] = []) => ({
+  summary,
+  sections,
+  basis,
+  followUps: ["What is haumai?", "How does Naam help?"],
+});
 
 describe("ask", () => {
   it("returns cited passages rendered from BaniDB data, not model text", async () => {
     const { llm } = fakeLlm({
       expand: () => expansion(),
       judge: judgeAll(),
-      answer: [answer(`### What Gurbani teaches\nEnvy burns the one who holds it.\n[[verse:${hitA.verseId}]]`)],
+      answer: [answer(`Envy burns the one who holds it. [[verse:${hitA.verseId}]]`)],
     });
     const result = await ask({ llm, banidb: fakeBanidb() }, "What does Sikhi teach about jealousy?");
 
@@ -24,8 +29,43 @@ describe("ask", () => {
     });
     expect(result.citationCheck).toEqual({ passedFirstTime: true, retried: false, sanitized: false, uncitedReferences: [] });
     expect(result.sourceLabel).toBeNull();
-    expect(result.segments.some((s) => s.type === "citation")).toBe(true);
+    expect(result.summary.some((s) => s.type === "citation")).toBe(true);
     expect(result.usage.steps.map((s) => s.step)).toEqual(["expand", "judge", "answer"]);
+  });
+
+  it("returns the main paragraph and deeper sections separately", async () => {
+    const { llm } = fakeLlm({
+      expand: () => expansion(),
+      judge: judgeAll(),
+      answer: [
+        answer(`Envy hurts the one who holds it. [[verse:${hitA.verseId}]]`, "gurbani", [
+          { title: "What Gurbani teaches", body: `Meeting the Guru, jealousy is forgotten. [[verse:${hitB.verseId}]]` },
+          { title: "Applying it", body: "Notice comparison when it starts." },
+          { title: "  ", body: "dropped: no title" },
+        ]),
+      ],
+    });
+    const result = await ask({ llm, banidb: fakeBanidb() }, "jealousy?");
+
+    expect(result.summary[0]).toEqual({ type: "text", text: "Envy hurts the one who holds it. " });
+    expect(result.sections.map((s) => s.title)).toEqual(["What Gurbani teaches", "Applying it"]);
+    // Cards cover citations from anywhere in the answer, in order of first citation.
+    expect(result.passages.map((p) => p.verseId)).toEqual([hitA.verseId, hitB.verseId]);
+    expect(result.answer.startsWith("Envy hurts")).toBe(true);
+    expect(result.answer).toContain("Applying it");
+  });
+
+  it("validates citations inside sections too", async () => {
+    const { llm } = fakeLlm({
+      expand: () => expansion(),
+      judge: judgeAll(),
+      answer: [
+        answer("Fine summary.", "gurbani", [{ title: "More", body: "Bad [[verse:424242]]" }]),
+        answer("Fine summary.", "gurbani", [{ title: "More", body: `Good [[verse:${hitA.verseId}]]` }]),
+      ],
+    });
+    const result = await ask({ llm, banidb: fakeBanidb() }, "jealousy?");
+    expect(result.citationCheck).toMatchObject({ passedFirstTime: false, retried: true, sanitized: false });
   });
 
   it("never sends Gurmukhi to the models", async () => {

@@ -15,9 +15,9 @@ type Exchange = {
 };
 
 const SUGGESTED = [
-  "I've been comparing myself to others and feeling jealous. What does Sikhi teach?",
   "What is Hukam?",
   "How does Gurbani explain ego (haumai)?",
+  "I keep comparing myself to others. What does Sikhi teach?",
   "What does Sikhi teach about anxiety and worry?",
   "What does Gurbani say about women?",
   "Why is seva important in Sikhi?",
@@ -35,18 +35,36 @@ function historyFrom(exchanges: Exchange[]): ChatTurn[] {
   );
 }
 
+function SendIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path d="M8 13V3M8 3 3.5 7.5M8 3l4.5 4.5" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function Check() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M5 8.2 7 10.2 11 6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function AskApp() {
   const [exchanges, setExchanges] = useState<Exchange[]>([]);
   const [draft, setDraft] = useState("");
   const [mode, setMode] = useState<Mode>("ask");
   const busy = exchanges.some((e) => !e.result && !e.error);
   const nextId = useRef(1);
-  const bottom = useRef<HTMLDivElement>(null);
+  const latest = useRef<HTMLElement>(null);
   const textarea = useRef<HTMLTextAreaElement>(null);
   const started = exchanges.length > 0;
 
+  // Bring each new question to the top of the screen so its answer reads from the start.
   useEffect(() => {
-    if (started) bottom.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    if (started) latest.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [exchanges.length, started]);
 
   function update(id: number, patch: Partial<Exchange>) {
@@ -82,18 +100,9 @@ export function AskApp() {
         void submit(draft);
       }}
     >
-      <div className="tabs" role="group" aria-label="Answer style">
-        <button type="button" aria-pressed={mode === "ask"} onClick={() => setMode("ask")}>
-          Ask
-        </button>
-        <button type="button" aria-pressed={mode === "explore"} onClick={() => setMode("explore")}>
-          Explore Gurbani
-        </button>
-      </div>
       <label htmlFor="question" className="sr-only">
         Your question
       </label>
-      <div className="composer-row">
       <textarea
         id="question"
         ref={textarea}
@@ -106,8 +115,8 @@ export function AskApp() {
               ? "Ask a follow-up…"
               : "Explore another question…"
             : mode === "ask"
-              ? "Ask a question about Sikhi…"
-              : "What would you like to explore in Gurbani?"
+              ? "Ask anything about Sikhi…"
+              : "What would you like to find in Gurbani?"
         }
         onChange={(e) => {
           setDraft(e.target.value);
@@ -121,9 +130,17 @@ export function AskApp() {
           }
         }}
       />
-        <button className="send" type="submit" disabled={busy || draft.trim().length < 3}>
-          {mode === "ask" ? "Ask" : "Explore"}
-          <span aria-hidden="true">→</span>
+      <div className="composer-row">
+        <div className="segmented" role="group" aria-label="Answer style">
+          <button type="button" aria-pressed={mode === "ask"} onClick={() => setMode("ask")}>
+            Ask
+          </button>
+          <button type="button" aria-pressed={mode === "explore"} onClick={() => setMode("explore")}>
+            Explore Gurbani
+          </button>
+        </div>
+        <button className="send" type="submit" disabled={busy || draft.trim().length < 3} aria-label="Send">
+          <SendIcon />
         </button>
       </div>
     </form>
@@ -132,38 +149,14 @@ export function AskApp() {
   if (!started) {
     return (
       <main className="wrap">
-        <section className="lead">
-          <p className="kicker">Sikhi · Gurbani · Everyday life</p>
-          <h1 className="headline">Ask a question. Discover the Gurbani behind the answer.</h1>
-          <p className="dek">
-            Ask Sikhi helps you explore Sikh teachings through conversation. Every Gurbani line it shows comes from BaniDB, with its
-            Ang and translator named, so you can read it in its full shabad.
-          </p>
-          <p className="byline">
-            By <strong>Ask Sikhi</strong> · Gurbani from BaniDB by Khalis Foundation · Explanations by Claude
-          </p>
+        <section className="hero">
+          <h1>What would you like to learn about Sikhi?</h1>
+          <p>Ask a question in your own words. You&apos;ll get a clear answer and the Gurbani behind it, each line shown with its Ang.</p>
         </section>
         {composer}
-        <aside className="sixty" aria-label="How Ask Sikhi works">
-          <p className="sixty-label">How it works</p>
-          <dl>
-            <div className="sixty-row">
-              <dt>Real Gurbani only</dt>
-              <dd>The AI never writes Gurbani. Every line is shown exactly as it appears in BaniDB.</dd>
-            </div>
-            <div className="sixty-row">
-              <dt>Read it in context</dt>
-              <dd>Each passage names its Ang and translator, and links to the full shabad.</dd>
-            </div>
-            <div className="sixty-row">
-              <dt>A guide, not an authority</dt>
-              <dd>Explanations are marked as interpretation, and differing Sikh views are named.</dd>
-            </div>
-          </dl>
-        </aside>
         <section className="suggest" aria-label="Suggested questions">
-          <p className="news-kicker">Try asking</p>
-          <ul className="index">
+          <p className="section-title">Try asking</p>
+          <ul className="suggest-grid">
             {SUGGESTED.map((s) => (
               <li key={s}>
                 <button type="button" onClick={() => void submit(s)}>
@@ -173,6 +166,29 @@ export function AskApp() {
             ))}
           </ul>
         </section>
+        <ul className="trust" aria-label="How answers work">
+          <li>
+            <Check />
+            <span>
+              <strong>Real Gurbani only</strong>
+              Every line comes from BaniDB, never written by AI.
+            </span>
+          </li>
+          <li>
+            <Check />
+            <span>
+              <strong>Always in context</strong>
+              Each passage links to its full shabad.
+            </span>
+          </li>
+          <li>
+            <Check />
+            <span>
+              <strong>A guide, not an authority</strong>
+              Interpretation is marked, and differing views are named.
+            </span>
+          </li>
+        </ul>
       </main>
     );
   }
@@ -180,35 +196,40 @@ export function AskApp() {
   return (
     <main className="wrap">
       <div className="thread">
-        {exchanges.map((x) => (
-          <section key={x.id} className="exchange" aria-label={`Question: ${x.question}`}>
-            <header className="q">
-              <p className="kicker">{x.mode === "explore" ? "Explore Gurbani" : "Your question"}</p>
-              <h2>{x.question}</h2>
+        {exchanges.map((x, i) => (
+          <article
+            key={x.id}
+            ref={i === exchanges.length - 1 ? latest : undefined}
+            className="exchange"
+            style={{ scrollMarginTop: 76 }}
+            aria-label={x.question}
+          >
+            <header>
+              {x.mode === "explore" && <span className="mode-tag">Explore Gurbani</span>}
+              <h2 className="question">{x.question}</h2>
             </header>
-            <div>
-              {x.error ? (
-                <div className="error" role="alert">
-                  <span>{x.error}</span>
-                  <button type="button" onClick={() => retry(x)} disabled={busy}>
-                    Try again
-                  </button>
-                </div>
-              ) : !x.result ? (
+            {x.error ? (
+              <div className="error" role="alert">
+                <span>{x.error}</span>
+                <button type="button" className="btn-secondary" onClick={() => retry(x)} disabled={busy}>
+                  Try again
+                </button>
+              </div>
+            ) : !x.result ? (
+              <div className="answer-card">
                 <Progress mode={x.mode} current={x.stage} />
-              ) : "answer" in x.result ? (
-                <AnswerView result={x.result} onFollowUp={(q) => void submit(q, "ask")} />
-              ) : (
-                <ExploreView result={x.result} />
-              )}
-            </div>
-          </section>
+              </div>
+            ) : "answer" in x.result ? (
+              <AnswerView result={x.result} prefix={`q${x.id}`} busy={busy} onFollowUp={(q) => void submit(q, "ask")} />
+            ) : (
+              <ExploreView result={x.result} prefix={`q${x.id}`} />
+            )}
+          </article>
         ))}
-        <div ref={bottom} />
       </div>
       <div className="composer-dock">
         {composer}
-        <p className="composer-note">Conversations aren&apos;t saved. Answers can be wrong; check each passage in its shabad.</p>
+        <p className="composer-note">Conversations aren&apos;t saved. Answers can be wrong, so check each passage in its shabad.</p>
       </div>
     </main>
   );

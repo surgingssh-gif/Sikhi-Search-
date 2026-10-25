@@ -120,6 +120,12 @@ describe("imageFrom", () => {
     expect(items.some((i) => i.image?.includes("/ace/ws/800/"))).toBe(true);
   });
 
+  it("asks Times of India for an 800px photo, not the original", () => {
+    expect(imageFrom({ enclosure: { "@_url": "https://static.toiimg.com/photo/msid-135197171,imgsize-2692216.cms", "@_type": "image/jpeg" } })).toBe(
+      "https://static.toiimg.com/thumb/msid-135197171,width-800,resizemode-4/photo.jpg",
+    );
+  });
+
   it("skips video embeds and uses an <img> in the HTML", () => {
     expect(imageFrom({ "media:content": { "@_url": "https://www.youtube.com/embed/x" } })).toBeNull();
     expect(imageFrom({ description: '<p><img src="https://example.org/a.jpg" /></p>' })).toBe("https://example.org/a.jpg");

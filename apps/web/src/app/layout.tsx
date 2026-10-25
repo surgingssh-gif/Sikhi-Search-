@@ -1,36 +1,38 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Noto_Serif_Gurmukhi, Source_Serif_4 } from "next/font/google";
+import { Libre_Franklin, Noto_Serif_Gurmukhi, Source_Serif_4, UnifrakturMaguntia } from "next/font/google";
 import Link from "next/link";
-import { LanguageProvider, LanguageToggle } from "@/components/Language";
-import { BottomNav, NavLinks } from "@/components/NavLinks";
-import { ThemeToggle, THEME_SCRIPT } from "@/components/ThemeToggle";
+import { LanguageProvider } from "@/components/Language";
+import { Masthead } from "@/components/Masthead";
+import { BottomNav } from "@/components/NavLinks";
+import { THEME_SCRIPT } from "@/components/ThemeToggle";
 import "./globals.css";
 
-const sans = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
+const sans = Libre_Franklin({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
 const serif = Source_Serif_4({ subsets: ["latin"], variable: "--font-serif", display: "swap", style: ["normal", "italic"] });
+const blackletter = UnifrakturMaguntia({ subsets: ["latin"], weight: "400", variable: "--font-blackletter", display: "swap" });
 const gurmukhi = Noto_Serif_Gurmukhi({ subsets: ["gurmukhi"], variable: "--font-gurmukhi", display: "swap" });
 
 export const metadata: Metadata = {
-  title: { default: "Ask Sikhi", template: "%s · Ask Sikhi" },
-  description: "Vichaar on Gurbani, a Sikh library, and news from the Panth and Punjab.",
+  title: { default: "Ask Sikhi: News of the Panth and Punjab", template: "%s · Ask Sikhi" },
+  description: "News from the Sikh world and Punjab, a story map, and Vichaar on Gurbani.",
   applicationName: "Ask Sikhi",
   openGraph: {
     title: "Ask Sikhi",
-    description: "Vichaar on Gurbani, a Sikh library, and news from the Panth and Punjab.",
+    description: "News from the Sikh world and Punjab, a story map, and Vichaar on Gurbani.",
     type: "website",
   },
 };
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f8f7f4" },
-    { media: "(prefers-color-scheme: dark)", color: "#0f1012" },
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#121212" },
   ],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${sans.variable} ${serif.variable} ${gurmukhi.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`${sans.variable} ${serif.variable} ${blackletter.variable} ${gurmukhi.variable}`} suppressHydrationWarning>
       <head>
         {/* Apply a saved light/dark choice before first paint. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
@@ -40,38 +42,25 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <a href="#main" className="skip-link">
             Skip to content
           </a>
-          <header className="site-header">
-            <div className="wrap wrap-wide">
-              <Link href="/" className="logo" aria-label="Ask Sikhi, home">
-                <span className="logo-mark" aria-hidden="true" lang="pa">
-                  ਸ
-                </span>
-                <span className="logo-text">Ask Sikhi</span>
-              </Link>
-              <nav className="header-nav" aria-label="Main">
-                <NavLinks />
-              </nav>
-              <div className="header-tools">
-                <LanguageToggle />
-                <ThemeToggle />
-              </div>
-            </div>
-          </header>
+          <Masthead />
           <div id="main" className="page">
             {children}
           </div>
           <footer className="site-footer">
-            <div className="wrap">
+            <div className="wrap wrap-wide">
               <div className="footer-inner">
+                <p className="footer-nameplate">Ask Sikhi</p>
                 <nav className="footer-links" aria-label="Footer">
+                  <Link href="/">Front Page</Link>
+                  <Link href="/map">Map</Link>
+                  <Link href="/vichaar">Vichaar</Link>
+                  <Link href="/library">Library</Link>
+                  <Link href="/gurbani">Gurbani</Link>
                   <Link href="/about">About</Link>
-                  <a href="https://www.banidb.com" target="_blank" rel="noreferrer">
-                    BaniDB
-                  </a>
                 </nav>
                 <p>
-                  Ask Sikhi is a learning tool, not a religious authority. Gurbani text, translations and transliterations from BaniDB by
-                  Khalis Foundation. News links go to their publishers.
+                  Headlines and photos belong to their publishers and link to the original story. Gurbani from BaniDB by Khalis
+                  Foundation. Ask Sikhi is a learning tool, not a religious authority.
                 </p>
               </div>
             </div>

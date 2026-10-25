@@ -306,7 +306,11 @@ export function imageFrom(it: Record<string, unknown>): string | null {
   const url = candidates.find((u) => /^https:\/\//.test(u) && !/youtube\.com|youtu\.be|gravatar|feedburner|pixel|1x1/i.test(u));
   if (!url) return null;
   // BBC serves 240px thumbnails in its feed; the same image comes in larger sizes.
-  return url.replace(/(ichef\.bbci\.co\.uk\/ace\/ws\/)\d+\//, "$1800/").replace(/&amp;/g, "&");
+  // Times of India links multi-megabyte originals; its resizer serves 800px.
+  return url
+    .replace(/(ichef\.bbci\.co\.uk\/ace\/ws\/)\d+\//, "$1800/")
+    .replace(/static\.toiimg\.com\/photo\/msid-(\d+)[^/]*$/, "static.toiimg.com/thumb/msid-$1,width-800,resizemode-4/photo.jpg")
+    .replace(/&amp;/g, "&");
 }
 
 function placeOf(title: string, snippet: string) {

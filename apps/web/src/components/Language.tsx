@@ -45,6 +45,7 @@ const STRINGS = {
   vichaar: { en: "Vichaar", pa: "ਵਿਚਾਰ" },
   library: { en: "Library", pa: "ਲਾਇਬ੍ਰੇਰੀ" },
   news: { en: "News", pa: "ਖ਼ਬਰਾਂ" },
+  map: { en: "Map", pa: "ਨਕਸ਼ਾ" },
   gurbani: { en: "Gurbani", pa: "ਗੁਰਬਾਣੀ" },
   answer: { en: "Answer", pa: "ਜਵਾਬ" },
   related: { en: "Related", pa: "ਹੋਰ ਸਵਾਲ" },

@@ -1,106 +1,137 @@
 import Link from "next/link";
-import { NewsList } from "@/components/NewsList";
+import { BriefingBox } from "@/components/BriefingBox";
+import { MiniMap } from "@/components/MapLoader";
 import { QuickAsk } from "@/components/QuickAsk";
-import { getHukamnama, getNews, slugify } from "@/lib/api";
-import { FEATURED_TOPICS } from "@/lib/featured";
+import { Story } from "@/components/Story";
+import { getHukamnama, getNews, type NewsItem } from "@/lib/api";
+import { NEWS_SECTIONS, picker } from "@/lib/sections";
 import { englishOf, openingLines } from "@/lib/shabad";
 
-function formatDate(iso: string): string {
-  const [y, m, d] = iso.split("-").map(Number);
-  return new Date(y!, m! - 1, d!).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
-}
-
-function Arrow() {
+function Band({ id, items }: { id: string; items: NewsItem[] }) {
+  if (!items.length) return null;
+  const section = NEWS_SECTIONS[id]!;
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
+    <section className="section-band" aria-labelledby={`band-${id}`}>
+      <div className="band-head">
+        <h2 id={`band-${id}`}>{section.title}</h2>
+        <Link href={`/section/${id}`}>More in {section.title} ›</Link>
+      </div>
+      <div className="card-grid">
+        {items.map((item, n) => (
+          <Story key={item.id} item={item} className={n === 0 ? "story-first" : ""} />
+        ))}
+      </div>
+    </section>
   );
 }
 
-export default async function Today() {
-  const [hukamnama, news] = await Promise.all([getHukamnama(), getNews(40)]);
-  const today = hukamnama?.shabads[0];
-  // Panthic stories first, then Punjab.
+export default async function FrontPage() {
+  const [hukamnama, news] = await Promise.all([getHukamnama(), getNews(200)]);
   const items = news?.items ?? [];
-  const headlines = [...items.filter((i) => i.categories.includes("panth")), ...items.filter((i) => !i.categories.includes("panth"))].slice(0, 6);
-  const topics = FEATURED_TOPICS.flatMap((g) => g.topics.slice(0, 2)).slice(0, 8);
+  const take = picker(items);
+  const panthic = (i: NewsItem) => i.categories.includes("panth");
+
+  // The lead is the newest Panthic story with a photo; the rail is the next few.
+  // English stories take the top slots; Punjabi ones run in the sections below.
+  const top = (i: NewsItem) => !!i.image && i.language === "en";
+  const lead = take(1, (i) => panthic(i) && top(i))[0] ?? take(1, top)[0] ?? take(1)[0];
+  const rail = take(3, top);
+  const bands = {
+    panth: take(4, (i) => panthic(i) && !!i.image),
+    punjab: take(4, (i) => i.categories.includes("punjab") && !!i.image),
+    diaspora: take(4, (i) => i.categories.includes("diaspora") && !!i.image),
+  };
+  const latest = take(10);
+  const today = hukamnama?.shabads[0];
+
+  if (!lead) {
+    return (
+      <main className="wrap wrap-wide front">
+        <p className="empty">The news couldn&apos;t be loaded right now. Please try again shortly.</p>
+      </main>
+    );
+  }
 
   return (
-    <main className="wrap">
-      <section className="today-head">
-        <p className="greeting" lang="pa">
-          ਵਾਹਿਗੁਰੂ ਜੀ ਕਾ ਖ਼ਾਲਸਾ, ਵਾਹਿਗੁਰੂ ਜੀ ਕੀ ਫ਼ਤਹਿ
-        </p>
-        {hukamnama && <p className="today-date">{formatDate(hukamnama.date)}</p>}
-      </section>
-
-      {today ? (
-        <section className="feature-card" aria-label="Today's Hukamnama">
-          <p className="feature-kicker">Today&apos;s Hukamnama from Sri Darbar Sahib</p>
-          <p className="feature-meta">
-            Ang {today.ang}
-            {today.writer && <> · {today.writer.english}</>}
-            {today.raag && <> · {today.raag.english}</>}
-          </p>
-          <div className="feature-lines">
-            {openingLines(today.verses, 2).map((v) => (
-              <div key={v.verseId}>
-                <p className="gurmukhi" lang="pa">
-                  {v.gurmukhi}
-                </p>
-                <p className="translation">{englishOf(v)}</p>
-              </div>
-            ))}
-          </div>
-          <div className="feature-actions">
-            <Link className="btn-primary" href={`/discuss/${today.shabadId}`}>
-              Vichaar on today&apos;s Hukamnama
-            </Link>
-            <Link className="btn-ghost" href={`/shabad/${today.shabadId}`}>
-              Read in full
-            </Link>
-          </div>
-        </section>
-      ) : (
-        <p className="empty">Today&apos;s Hukamnama couldn&apos;t be loaded right now.</p>
-      )}
-
-      <section className="today-block" aria-label="Vichaar">
-        <div className="block-head">
-          <h2>Vichaar</h2>
-          <Link href="/vichaar" className="block-link">
-            Open <Arrow />
-          </Link>
+    <main className="wrap wrap-wide front">
+      <div className="front-top">
+        <div>
+          <Story item={lead} variant="lead" snippet />
+          <BriefingBox />
         </div>
-        <QuickAsk />
-      </section>
-
-      <section className="today-block" aria-label="News">
-        <div className="block-head">
-          <h2>From the Panth and Punjab</h2>
-          <Link href="/news" className="block-link">
-            All news <Arrow />
-          </Link>
-        </div>
-        {headlines.length ? <NewsList items={headlines} compact /> : <p className="empty">News couldn&apos;t be loaded right now.</p>}
-      </section>
-
-      <section className="today-block" aria-label="Library">
-        <div className="block-head">
-          <h2>From the Library</h2>
-          <Link href="/library" className="block-link">
-            Browse <Arrow />
-          </Link>
-        </div>
-        <ul className="topic-chips">
-          {topics.map((topic) => (
-            <li key={topic}>
-              <Link href={`/library/${slugify(topic)}?topic=${encodeURIComponent(topic)}`}>{topic}</Link>
-            </li>
+        <div className="front-rail">
+          {rail.map((item, n) => (
+            <Story key={item.id} item={item} variant={n === 0 ? "medium" : "row"} />
           ))}
-        </ul>
+        </div>
+      </div>
+
+      <Band id="panth" items={bands.panth} />
+
+      <section className="section-band modules" aria-label="Map, Hukamnama and Vichaar">
+        <div className="module">
+          <h3>The story map</h3>
+          <MiniMap items={items} />
+          <Link className="module-link" href="/map">
+            Explore the news by place ›
+          </Link>
+        </div>
+        <div className="module">
+          <h3>Today&apos;s Hukamnama</h3>
+          {today ? (
+            <>
+              {openingLines(today.verses, 1).map((v) => (
+                <div key={v.verseId}>
+                  <p className="gurmukhi" lang="pa">
+                    {v.gurmukhi}
+                  </p>
+                  <p className="translation">{englishOf(v)}</p>
+                </div>
+              ))}
+              <p className="story-meta">
+                Sri Darbar Sahib · Ang {today.ang}
+                {today.writer && <> · {today.writer.english}</>}
+              </p>
+              <p>
+                <Link className="module-link" href={`/discuss/${today.shabadId}`}>
+                  Vichaar on today&apos;s Hukamnama ›
+                </Link>
+              </p>
+            </>
+          ) : (
+            <p className="story-meta">Today&apos;s Hukamnama couldn&apos;t be loaded.</p>
+          )}
+        </div>
+        <div className="module">
+          <h3>Vichaar</h3>
+          <p className="story-snippet">Ask about Gurbani, history or living as a Sikh. Answers cite Gurbani from BaniDB.</p>
+          <QuickAsk />
+          <p>
+            <Link className="module-link" href="/library">
+              Or browse the Library ›
+            </Link>
+          </p>
+        </div>
       </section>
+
+      <Band id="punjab" items={bands.punjab} />
+      <Band id="diaspora" items={bands.diaspora} />
+
+      {latest.length > 0 && (
+        <section className="section-band" aria-labelledby="band-latest">
+          <div className="band-head">
+            <h2 id="band-latest">Latest</h2>
+            <Link href="/section/latest">All stories ›</Link>
+          </div>
+          <ul className="latest-list">
+            {latest.map((item) => (
+              <li key={item.id}>
+                <Story item={item} variant="text" />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </main>
   );
 }

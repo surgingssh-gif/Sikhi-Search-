@@ -5,7 +5,12 @@ import { usePathname } from "next/navigation";
 import { useT, type StringKey } from "./Language";
 
 const ICONS: Record<string, React.ReactNode> = {
-  today: <path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1Z" />,
+  map: (
+    <>
+      <path d="M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6 9 4Z" />
+      <path d="M9 4v14M15 6v14" />
+    </>
+  ),
   vichaar: <path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H10l-4 3.5V16H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" />,
   library: (
     <>
@@ -28,10 +33,10 @@ const ICONS: Record<string, React.ReactNode> = {
 };
 
 export const NAV: { href: string; key: StringKey; match: (p: string) => boolean }[] = [
-  { href: "/", key: "today", match: (p) => p === "/" },
+  { href: "/", key: "news", match: (p) => p === "/" || p.startsWith("/section") || p.startsWith("/news") },
+  { href: "/map", key: "map", match: (p) => p.startsWith("/map") },
   { href: "/vichaar", key: "vichaar", match: (p) => p.startsWith("/vichaar") || p.startsWith("/discuss") },
   { href: "/library", key: "library", match: (p) => p.startsWith("/library") },
-  { href: "/news", key: "news", match: (p) => p.startsWith("/news") },
   { href: "/gurbani", key: "gurbani", match: (p) => p.startsWith("/gurbani") || p.startsWith("/shabad") },
 ];
 

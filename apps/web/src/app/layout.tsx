@@ -1,7 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Noto_Serif_Gurmukhi, Source_Serif_4 } from "next/font/google";
 import Link from "next/link";
-import { NavLinks } from "@/components/NavLinks";
+import { LanguageProvider, LanguageToggle } from "@/components/Language";
+import { BottomNav, NavLinks } from "@/components/NavLinks";
 import { ThemeToggle, THEME_SCRIPT } from "@/components/ThemeToggle";
 import "./globals.css";
 
@@ -11,11 +12,11 @@ const gurmukhi = Noto_Serif_Gurmukhi({ subsets: ["gurmukhi"], variable: "--font-
 
 export const metadata: Metadata = {
   title: { default: "Ask Sikhi", template: "%s · Ask Sikhi" },
-  description: "Ask a question about Sikhi. Get a clear answer and the Gurbani behind it, every line shown with its Ang.",
+  description: "Vichaar on Gurbani, a Sikh library, and news from the Panth and Punjab.",
   applicationName: "Ask Sikhi",
   openGraph: {
     title: "Ask Sikhi",
-    description: "Ask a question about Sikhi. Get a clear answer and the Gurbani behind it.",
+    description: "Vichaar on Gurbani, a Sikh library, and news from the Panth and Punjab.",
     type: "website",
   },
 };
@@ -35,44 +36,48 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
       <body>
-        <a href="#main" className="skip-link">
-          Skip to content
-        </a>
-        <header className="site-header">
-          <div className="wrap">
-            <Link href="/" className="logo" aria-label="Ask Sikhi, home">
-              <span className="logo-mark" aria-hidden="true" lang="pa">
-                ਸ
-              </span>
-              <span className="logo-text">Ask Sikhi</span>
-            </Link>
-            <nav className="header-nav" aria-label="Main">
-              <NavLinks />
-              <ThemeToggle />
-            </nav>
-          </div>
-        </header>
-        <div id="main" className="page">
-          {children}
-        </div>
-        <footer className="site-footer">
-          <div className="wrap">
-            <div className="footer-inner">
-              <nav className="footer-links" aria-label="Footer">
-                <Link href="/">Ask</Link>
-                <Link href="/discuss">Discuss</Link>
-                <Link href="/about">About</Link>
-                <a href="https://www.banidb.com" target="_blank" rel="noreferrer">
-                  BaniDB
-                </a>
+        <LanguageProvider>
+          <a href="#main" className="skip-link">
+            Skip to content
+          </a>
+          <header className="site-header">
+            <div className="wrap wrap-wide">
+              <Link href="/" className="logo" aria-label="Ask Sikhi, home">
+                <span className="logo-mark" aria-hidden="true" lang="pa">
+                  ਸ
+                </span>
+                <span className="logo-text">Ask Sikhi</span>
+              </Link>
+              <nav className="header-nav" aria-label="Main">
+                <NavLinks />
               </nav>
-              <p>
-                Ask Sikhi is a learning tool, not a religious authority. Gurbani text, translations and transliterations from BaniDB by
-                Khalis Foundation.
-              </p>
+              <div className="header-tools">
+                <LanguageToggle />
+                <ThemeToggle />
+              </div>
             </div>
+          </header>
+          <div id="main" className="page">
+            {children}
           </div>
-        </footer>
+          <footer className="site-footer">
+            <div className="wrap">
+              <div className="footer-inner">
+                <nav className="footer-links" aria-label="Footer">
+                  <Link href="/about">About</Link>
+                  <a href="https://www.banidb.com" target="_blank" rel="noreferrer">
+                    BaniDB
+                  </a>
+                </nav>
+                <p>
+                  Ask Sikhi is a learning tool, not a religious authority. Gurbani text, translations and transliterations from BaniDB by
+                  Khalis Foundation. News links go to their publishers.
+                </p>
+              </div>
+            </div>
+          </footer>
+          <BottomNav />
+        </LanguageProvider>
       </body>
     </html>
   );

@@ -1,7 +1,27 @@
-import type { AngContents, AskResult, ChatTurn, DiscussResult, ExploreResult, Hukamnama, Shabad, Stage } from "@ask-sikhi/core";
+import type {
+  AngContents,
+  AskResult,
+  Bani,
+  BaniSummary,
+  ChatTurn,
+  DiscussResult,
+  ExploreResult,
+  Hukamnama,
+  LibraryEntry,
+  NewsItem,
+  Shabad,
+  Stage,
+} from "@ask-sikhi/core";
 
 export type {
   AngContents,
+  Bani,
+  BaniSummary,
+  BaniVerse,
+  LibraryEntry,
+  LibrarySource,
+  NewsCategory,
+  NewsItem,
   AngShabad,
   AskResult,
   ChatTurn,
@@ -39,7 +59,8 @@ const FRIENDLY: Record<string, string> = {
   declined: "This question can't be answered here.",
   invalid_request: "Please write a question between 3 and 500 characters.",
   invalid_ang: "Sri Guru Granth Sahib Ji has Angs 1 to 1430.",
-  not_found: "That shabad couldn't be found.",
+  not_found: "That couldn't be found.",
+  not_sikh_topic: "The Library covers Sikhi, Sikh history and Punjab's Sikh heritage. Try a Sikh topic.",
   network: "Couldn't reach Ask Sikhi. Check your connection and try again.",
   internal_error: "Something went wrong on our side. Please try again.",
 };
@@ -50,18 +71,32 @@ export function friendlyError(err: unknown): string {
 }
 
 /** Ask or Explore a question, following progress as it happens. */
+export type Language = "en" | "pa";
+
 export function askStream<M extends Mode>(
   mode: M,
   question: string,
   history: ChatTurn[],
   onStage: (stage: Stage) => void,
+  language: Language = "en",
 ): Promise<M extends "ask" ? AskResult : ExploreResult> {
-  return streamPost(`/v1/${mode}`, mode === "ask" ? { question, history } : { question }, onStage);
+  return streamPost(`/v1/${mode}`, mode === "ask" ? { question, history, language } : { question }, onStage);
 }
 
 /** Ask about one shabad in an ongoing discussion. */
-export function discussStream(shabadId: number, question: string, history: ChatTurn[], onStage: (stage: Stage) => void): Promise<DiscussResult> {
-  return streamPost("/v1/discuss", { shabadId, question, history }, onStage);
+export function discussStream(
+  shabadId: number,
+  question: string,
+  history: ChatTurn[],
+  onStage: (stage: Stage) => void,
+  language: Language = "en",
+): Promise<DiscussResult> {
+  return streamPost("/v1/discuss", { shabadId, question, history, language }, onStage);
+}
+
+/** Look up a Library topic, researching it if it isn't in the Library yet. */
+export async function researchStream(topic: string, onStage: (stage: Stage) => void): Promise<LibraryEntry> {
+  return (await streamPost<{ entry: LibraryEntry }>("/v1/library/research", { topic }, onStage)).entry;
 }
 
 /**
@@ -139,4 +174,86 @@ export async function fetchAng(ang: number): Promise<AngContents> {
   const body = (await res.json().catch(() => ({}))) as AngContents & { error?: string; message?: string };
   if (!res.ok) throw new ApiError(body.error ?? "internal_error", body.message);
   return body;
+}
+
+/** GET a JSON endpoint server-side; null when the API can't be reached so pages still render. */
+async function serverGet<T>(path: string, revalidate: number): Promise<T | null> {
+  try {
+    const res = await fetch(`${SERVER_API_URL}${path}`, { next: { revalidate } });
+    return res.ok ? ((await res.json()) as T) : null;
+  } catch {
+    return null;
+  }
+}
+
+export interface NewsResponse {
+  items: NewsItem[];
+  failed: string[];
+  fetchedAt: string | null;
+}
+
+export function getNews(limit = 60, category?: string): Promise<NewsResponse | null> {
+  return serverGet<NewsResponse>(`/v1/news?limit=${limit}${category ? `&category=${category}` : ""}`, 300);
+}
+
+export interface NewsBriefingResponse {
+  generatedAt: string;
+  bullets: { text: string; itemIds: string[] }[];
+}
+
+/** The AI daily briefing (browser-side; the first one of the day takes a few seconds). */
+export async function fetchBriefing(): Promise<NewsBriefingResponse | null> {
+  try {
+    const res = await fetch(`${API_URL}/v1/news/briefing`);
+    return res.ok ? ((await res.json()) as NewsBriefingResponse) : null;
+  } catch {
+    return null;
+  }
+}
+
+export interface LibraryIndexItem {
+  slug: string;
+  title: string;
+  titleGurmukhi: string | null;
+  kind: LibraryEntry["kind"];
+  summary: string;
+  generatedAt: string;
+  reviewed: boolean;
+}
+
+export async function getLibraryIndex(): Promise<LibraryIndexItem[]> {
+  return (await serverGet<{ entries: LibraryIndexItem[] }>("/v1/library", 60))?.entries ?? [];
+}
+
+/** A stored Library entry (browser-side), or null if it hasn't been researched yet. */
+export async function fetchLibraryEntry(slug: string): Promise<LibraryEntry | null> {
+  try {
+    const res = await fetch(`${API_URL}/v1/library/${encodeURIComponent(slug)}`);
+    return res.ok ? ((await res.json()) as { entry: LibraryEntry }).entry : null;
+  } catch {
+    throw new ApiError("network");
+  }
+}
+
+export async function getBanis(): Promise<BaniSummary[]> {
+  return (await serverGet<{ banis: BaniSummary[] }>("/v1/banis", 86400))?.banis ?? [];
+}
+
+export async function getBani(id: number): Promise<Bani | null> {
+  return (await serverGet<{ bani: Bani }>(`/v1/banis/${id}`, 86400))?.bani ?? null;
+}
+
+/** Same rule as the API's slugify, so links match stored entries. */
+export function slugify(topic: string): string {
+  const ascii = topic
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+  if (ascii) return ascii;
+  let h = 0;
+  for (const ch of topic) h = (h * 31 + ch.codePointAt(0)!) >>> 0;
+  return `t-${h.toString(36)}`;
 }

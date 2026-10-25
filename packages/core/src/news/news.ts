@@ -1,6 +1,7 @@
 import { XMLParser } from "fast-xml-parser";
 import { z } from "zod";
 import type { JsonLlm, LlmUsage } from "../ai/llm";
+import { placeFor, type PlaceRegion } from "./places";
 
 /**
  * Sikh and Punjab news from publishers' own RSS feeds. We show headlines,
@@ -30,6 +31,10 @@ export interface NewsItem {
   publishedAt: string | null;
   snippet: string;
   categories: NewsCategory[];
+  /** Publisher's photo for the story, if it has one. */
+  image: string | null;
+  /** Where the story happened, for the map. */
+  place: { name: string; region: PlaceRegion; lat: number; lng: number } | null;
 }
 
 const PUNJAB_EN = /\b(punjab|punjabi|sikhs?|gurdwaras?|sgpc|akal takht|harmandir|golden temple|amritsar|akali|jathedar|khalsa)\b/i;
@@ -107,6 +112,8 @@ export function parseFeed(xml: string, feed: NewsFeed): NewsItem[] {
       publishedAt: Number.isNaN(date.getTime()) ? null : date.toISOString(),
       snippet,
       categories: [...categories],
+      image: imageFrom(it),
+      place: placeOf(title, snippet),
     });
   }
   return out;
@@ -119,6 +126,8 @@ export interface NewsServiceOptions {
   ttlMs?: number;
   llm?: JsonLlm;
   now?: () => number;
+  /** How many article pages to read per refresh for a preview image. 0 turns it off. */
+  maxPreviewFetches?: number;
 }
 
 export interface NewsBriefing {
@@ -204,7 +213,30 @@ export class NewsService {
       }
     });
     items.sort((a, b) => (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""));
+    await this.fillImages(items);
     return { items, failed };
+  }
+
+  /** Page preview images for stories whose feed has no photo (Panthic stories first), remembered per URL. */
+  private readonly previewImages = new Map<string, string | null>();
+
+  private async fillImages(items: NewsItem[]): Promise<void> {
+    for (const item of items) if (!item.image && this.previewImages.has(item.url)) item.image = this.previewImages.get(item.url) ?? null;
+    const missing = items
+      .filter((i) => !i.image && !this.previewImages.has(i.url))
+      .sort((a, b) => Number(b.categories.includes("panth")) - Number(a.categories.includes("panth")))
+      .slice(0, this.options.maxPreviewFetches ?? 30);
+    let next = 0;
+    await Promise.all(
+      Array.from({ length: Math.min(5, missing.length) }, async () => {
+        while (next < missing.length) {
+          const item = missing[next++]!;
+          const img = await fetchPreviewImage(item.url, this.fetchImpl);
+          this.previewImages.set(item.url, img);
+          item.image = img;
+        }
+      }),
+    );
   }
 
   async briefingToday(): Promise<NewsBriefing> {
@@ -240,5 +272,75 @@ export class NewsService {
       return value;
     })().finally(() => (this.briefingPending = null));
     return this.briefingPending;
+  }
+}
+
+const IMAGE_EXT = /\.(jpe?g|png|webp|gif|avif)(\?|$)|\/photo\/|ichef\.bbci|images\.|img\./i;
+
+function attr(v: unknown, name: string): string {
+  if (v && typeof v === "object" && `@_${name}` in (v as object)) return String((v as Record<string, unknown>)[`@_${name}`]);
+  return "";
+}
+
+function list(v: unknown): unknown[] {
+  return Array.isArray(v) ? v : v ? [v] : [];
+}
+
+/** The best photo an RSS item offers: media:content, media:thumbnail, an image enclosure, or the first <img> in its HTML. */
+export function imageFrom(it: Record<string, unknown>): string | null {
+  const candidates: string[] = [];
+  for (const m of list(it["media:content"])) {
+    const url = attr(m, "url");
+    const medium = attr(m, "medium");
+    const type = attr(m, "type");
+    if (url && (medium === "image" || type.startsWith("image") || (!medium && !type && IMAGE_EXT.test(url)))) candidates.push(url);
+  }
+  for (const m of list(it["media:thumbnail"])) candidates.push(attr(m, "url"));
+  for (const e of list(it.enclosure)) {
+    const type = attr(e, "type");
+    if (!type || type.startsWith("image")) candidates.push(attr(e, "url"));
+  }
+  const html = `${text(it["content:encoded"])} ${text(it.description)}`;
+  const img = /<img[^>]+src=["']([^"']+)["']/i.exec(html);
+  if (img?.[1]) candidates.push(img[1]);
+  const url = candidates.find((u) => /^https:\/\//.test(u) && !/youtube\.com|youtu\.be|gravatar|feedburner|pixel|1x1/i.test(u));
+  if (!url) return null;
+  // BBC serves 240px thumbnails in its feed; the same image comes in larger sizes.
+  return url.replace(/(ichef\.bbci\.co\.uk\/ace\/ws\/)\d+\//, "$1800/").replace(/&amp;/g, "&");
+}
+
+function placeOf(title: string, snippet: string) {
+  const p = placeFor(title, snippet);
+  if (p) return { name: p.name, region: p.region, lat: p.lat, lng: p.lng };
+  return null;
+}
+
+/** A page's preview image (og:image or twitter:image), read from the first part of its HTML. */
+export async function fetchPreviewImage(url: string, fetchImpl: typeof globalThis.fetch = globalThis.fetch): Promise<string | null> {
+  try {
+    const res = await fetchImpl(url, {
+      headers: { accept: "text/html", "user-agent": "Mozilla/5.0 (compatible; AskSikhi/0.1; +https://github.com/surgingssh-gif/Sikhi-Search-)" },
+      signal: AbortSignal.timeout(6000),
+      redirect: "follow",
+    });
+    if (!res.ok || !res.body) return null;
+    // Only the <head> is needed; stop reading after ~200 KB.
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let html = "";
+    while (html.length < 200_000) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      html += decoder.decode(value, { stream: true });
+      if (/<\/head>/i.test(html)) break;
+    }
+    void reader.cancel().catch(() => {});
+    const m =
+      /<meta[^>]+(?:property|name)=["'](?:og:image|twitter:image)(?::src)?["'][^>]*content=["']([^"']+)["']/i.exec(html) ??
+      /<meta[^>]+content=["']([^"']+)["'][^>]*(?:property|name)=["'](?:og:image|twitter:image)["']/i.exec(html);
+    const img = m?.[1]?.replace(/&amp;/g, "&");
+    return img && /^https:\/\//.test(img) ? img : null;
+  } catch {
+    return null;
   }
 }

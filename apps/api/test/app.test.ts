@@ -254,6 +254,8 @@ describe("News routes", () => {
     publishedAt: null,
     snippet: "",
     categories,
+    image: null,
+    place: null,
   });
   const news = {
     latest: async () => ({ items: [item("a", ["panth"]), item("b", ["punjab"]), item("c", ["panth", "diaspora"])], failed: [], fetchedAt: "2026-10-25T00:00:00.000Z" }),

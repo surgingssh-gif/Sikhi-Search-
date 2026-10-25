@@ -31,3 +31,4 @@ export {
 export { discuss, describeShabad, DISCUSS_SYSTEM, DiscussSchema, type DiscussResult } from "./pipeline/discuss";
 export * from "./library/research";
 export * from "./news/news";
+export * from "./news/places";

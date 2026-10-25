@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
-import { cleanSnippet, DEFAULT_FEEDS, NewsService, parseFeed, slugify, type NewsFeed } from "../src";
+import { cleanSnippet, DEFAULT_FEEDS, imageFrom, NewsService, parseFeed, placeFor, slugify, type NewsFeed } from "../src";
 
 // Fixtures are real responses recorded from each publisher's RSS feed.
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -61,7 +61,7 @@ describe("NewsService", () => {
         : new Response("down", { status: 503 }),
     );
     let now = 0;
-    const service = new NewsService({ feeds, fetch, now: () => now });
+    const service = new NewsService({ feeds, fetch, now: () => now, maxPreviewFetches: 0 });
     const first = await service.latest();
     expect(first.failed).toEqual(["b"]);
     expect(first.items.map((i) => i.title)).toEqual(["Gurpurab celebrated in Amritsar", "SGPC meets on Akal Takht matter"]);
@@ -74,7 +74,7 @@ describe("NewsService", () => {
 
   it("drops the same story reported by two outlets", async () => {
     const fetch = vi.fn(async () => new Response(rss(["Punjab assembly passes resolution on river waters"])));
-    const service = new NewsService({ feeds, fetch });
+    const service = new NewsService({ feeds, fetch, maxPreviewFetches: 0 });
     expect((await service.latest()).items).toHaveLength(1);
   });
 });
@@ -84,5 +84,44 @@ describe("slugify", () => {
     expect(slugify("Zafarnama")).toBe("zafarnama");
     expect(slugify("Saka Nankana Sahib (1921)")).toBe("saka-nankana-sahib-1921");
     expect(slugify("ਜ਼ਫ਼ਰਨਾਮਾ")).toMatch(/^t-[a-z0-9]+$/);
+  });
+});
+
+describe("placeFor", () => {
+  it("prefers the most specific place in the headline", () => {
+    expect(placeFor("Belgian Sikh Community to Host Key Dialogue in Sint-Truiden", "")?.name).toBe("Sint-Truiden");
+    expect(placeFor("Punjab police arrest two in Mansa", "")?.name).toBe("Mansa");
+  });
+
+  it("falls back to the snippet, and knows Sikh institutions' homes", () => {
+    expect(placeFor("Community gathers for remembrance", "Sangat met in Surrey, B.C. on Sunday")?.name).toBe("Surrey");
+    expect(placeFor("SGPC honours students", "")?.name).toBe("Amritsar");
+  });
+
+  it("matches Gurmukhi place names", () => {
+    expect(placeFor("ਲੁਧਿਆਣਾ ਵਿੱਚ ਨਗਰ ਕੀਰਤਨ", "")?.name).toBe("Ludhiana");
+  });
+
+  it("does not treat the Congress party or the word 'us' as places in the US", () => {
+    expect(placeFor("Punjab Congress meets on alliance", "")?.name).toBe("Punjab");
+    expect(placeFor("Join us for kirtan", "")).toBeNull();
+  });
+});
+
+describe("imageFrom", () => {
+  it("reads photos from real feeds", () => {
+    const withPhotos = parseFeed(fixture("toi-chandigarh.xml"), { ...feed("toi"), mustMatch: /./ });
+    expect(withPhotos.length).toBeGreaterThan(0);
+    expect(withPhotos.every((i) => i.image?.startsWith("https://"))).toBe(true);
+  });
+
+  it("upgrades BBC's small thumbnails", () => {
+    const items = parseFeed(fixture("bbc-punjabi.xml"), { ...feed("bbcpunjabi"), mustMatch: /./ });
+    expect(items.some((i) => i.image?.includes("/ace/ws/800/"))).toBe(true);
+  });
+
+  it("skips video embeds and uses an <img> in the HTML", () => {
+    expect(imageFrom({ "media:content": { "@_url": "https://www.youtube.com/embed/x" } })).toBeNull();
+    expect(imageFrom({ description: '<p><img src="https://example.org/a.jpg" /></p>' })).toBe("https://example.org/a.jpg");
   });
 });

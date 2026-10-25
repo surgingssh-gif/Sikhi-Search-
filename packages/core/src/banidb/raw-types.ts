@@ -80,3 +80,22 @@ export interface RawHukamnamaResponse {
 export interface RawAngResponse {
   page?: RawVerse[];
 }
+
+export interface RawBaniListItem {
+  ID: number;
+  gurmukhiUni: string;
+  transliterations?: { english?: string };
+  token?: string;
+}
+
+export interface RawBaniResponse {
+  baniInfo: {
+    baniID: number;
+    unicode: string;
+    english: string;
+    source?: RawSource | null;
+    raag?: RawRaag | null;
+    writer?: RawWriter | null;
+  };
+  verses: { header: number; paragraph: number; verse: RawVerse }[];
+}

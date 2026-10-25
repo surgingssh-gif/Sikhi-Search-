@@ -3,7 +3,7 @@ import { primaryEnglish } from "../banidb/normalize";
 import type { ChatTurn, JsonLlm, LlmUsage } from "../ai/llm";
 import { findUncitedReferences, parseSegments, sanitizeAnswer, validateAnswer, type Segment } from "../citations/validate";
 import type { NamedRef, Source, Translation } from "../types";
-import { answerText, buildAnswerPrompt, correctionPrompt, generateAnswer, type GeneratedAnswer } from "./answer";
+import { answerText, buildAnswerPrompt, correctionPrompt, generateAnswer, type GeneratedAnswer, type Language } from "./answer";
 import { expandQuestion, type Expansion } from "./expand";
 import { judgeCandidates, type JudgedCandidate } from "./judge";
 import { retrieveCandidates } from "./retrieve";
@@ -83,11 +83,13 @@ const MAX_QUESTION_CHARS = 500;
 const MAX_HISTORY_TURNS = 6;
 
 /** Pipeline stages, in order, for progress indicators. */
-export type Stage = "understanding" | "searching" | "reading" | "writing" | "checking";
+export type Stage = "understanding" | "searching" | "reading" | "writing" | "checking" | "researching";
 
 export interface PipelineOptions {
   /** Called as each stage starts. */
   onStage?: (stage: Stage) => void;
+  /** Language the answer is written in. Default English. */
+  language?: Language;
 }
 
 export async function ask(
@@ -104,12 +106,14 @@ export async function ask(
   const { expansion, judged } = await findPassages(deps, q, recent, steps, stage);
 
   stage("writing");
-  const messages: ChatTurn[] = [...recent, { role: "user", content: buildAnswerPrompt(q, expansion, judged) }];
+  const language = options.language ?? "en";
+  const check = { gurmukhiProse: language === "pa" };
+  const messages: ChatTurn[] = [...recent, { role: "user", content: buildAnswerPrompt(q, expansion, judged, language) }];
   let { answer, usage } = await generateAnswer(deps.llm, messages);
   steps.push(usage);
 
   stage("checking");
-  let report = validateAnswer(answerText(answer), judged.map((j) => j.verse));
+  let report = validateAnswer(answerText(answer), judged.map((j) => j.verse), check);
   const passedFirstTime = report.ok;
   let retried = false;
   if (!report.ok) {
@@ -117,14 +121,14 @@ export async function ask(
     const retry = await generateAnswer(deps.llm, [
       ...messages,
       { role: "assistant", content: JSON.stringify(answer) },
-      { role: "user", content: correctionPrompt(report) },
+      { role: "user", content: correctionPrompt(report, language) },
     ]);
     steps.push(retry.usage);
     answer = retry.answer;
-    report = validateAnswer(answerText(answer), judged.map((j) => j.verse));
+    report = validateAnswer(answerText(answer), judged.map((j) => j.verse), check);
   }
   const sanitized = !report.ok;
-  const clean = (t: string) => (sanitized ? sanitizeAnswer(t, report) : t.trim());
+  const clean = (t: string) => (sanitized ? sanitizeAnswer(t, report, check) : t.trim());
   const summary = clean(answer.summary);
   const sections = answer.sections
     .slice(0, 3)
@@ -139,7 +143,7 @@ export async function ask(
     question: q,
     category: expansion.category,
     basis: answer.basis,
-    sourceLabel: labelFor(expansion.category, answer.basis),
+    sourceLabel: labelFor(expansion.category, answer.basis, language),
     summary: parseSegments(summary),
     sections: sections.map((s) => ({ title: s.title, segments: parseSegments(s.body) })),
     answer: text,
@@ -170,10 +174,18 @@ async function findPassages(deps: PipelineDeps, q: string, history: ChatTurn[], 
   return { expansion, judged: judgement.kept };
 }
 
-export function labelFor(category: Expansion["category"], basis: GeneratedAnswer["basis"]): string | null {
-  if (basis === "general_knowledge") return GENERAL_KNOWLEDGE_LABEL;
-  if (category === "history") return HISTORY_LABEL;
-  if (basis === "gurbani_and_general") return PARTLY_GENERAL_LABEL;
+/** Punjabi versions of the source labels. Reviewed wording is welcome. */
+const LABELS_PA = {
+  general: "ਇਹ ਜਵਾਬ ਇਤਿਹਾਸ ਅਤੇ ਆਮ ਜਾਣਕਾਰੀ 'ਤੇ ਅਧਾਰਿਤ ਹੈ, ਗੁਰਬਾਣੀ ਦੀਆਂ ਪੰਕਤੀਆਂ 'ਤੇ ਨਹੀਂ।",
+  partly: "ਇਸ ਜਵਾਬ ਦੇ ਕੁਝ ਹਿੱਸੇ ਦਿਖਾਈ ਗਈ ਗੁਰਬਾਣੀ ਤੋਂ ਇਲਾਵਾ ਆਮ ਜਾਣਕਾਰੀ 'ਤੇ ਅਧਾਰਿਤ ਹਨ।",
+  history: "ਇਤਿਹਾਸਕ ਵੇਰਵੇ ਦਸਤਾਵੇਜ਼ੀ ਇਤਿਹਾਸ ਤੋਂ ਹਨ, ਗੁਰਬਾਣੀ ਤੋਂ ਨਹੀਂ। ਵਿਸਥਾਰ ਲਈ ਭਰੋਸੇਯੋਗ ਸਿੱਖ ਇਤਿਹਾਸਕ ਸਰੋਤ ਵੇਖੋ।",
+};
+
+export function labelFor(category: Expansion["category"], basis: GeneratedAnswer["basis"], language: Language = "en"): string | null {
+  const pa = language === "pa";
+  if (basis === "general_knowledge") return pa ? LABELS_PA.general : GENERAL_KNOWLEDGE_LABEL;
+  if (category === "history") return pa ? LABELS_PA.history : HISTORY_LABEL;
+  if (basis === "gurbani_and_general") return pa ? LABELS_PA.partly : PARTLY_GENERAL_LABEL;
   return null;
 }
 

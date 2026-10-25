@@ -87,7 +87,10 @@ export async function discuss(
   stage("reading");
   const shabad = await deps.banidb.getShabad(shabadId);
   const context = describeShabad(shabad);
-  const messages: ChatTurn[] = [...history.slice(-MAX_HISTORY_TURNS), { role: "user", content: q }];
+  const language = options.language ?? "en";
+  const check = { gurmukhiProse: language === "pa" };
+  const ask = language === "pa" ? `${q}\n\n(Reply in natural modern Punjabi in Gurmukhi script. Keep [[verse:ID]] markers as they are. Do not quote Gurbani or use the ॥ marker; paraphrase instead.)` : q;
+  const messages: ChatTurn[] = [...history.slice(-MAX_HISTORY_TURNS), { role: "user", content: ask }];
 
   stage("writing");
   const run = async (msgs: ChatTurn[]) => {
@@ -98,16 +101,16 @@ export async function discuss(
   let reply = await run(messages);
 
   stage("checking");
-  let report = validateAnswer(reply.reply, shabad.verses);
+  let report = validateAnswer(reply.reply, shabad.verses, check);
   const passedFirstTime = report.ok;
   let retried = false;
   if (!report.ok) {
     retried = true;
-    reply = await run([...messages, { role: "assistant", content: JSON.stringify(reply) }, { role: "user", content: correctionPrompt(report) }]);
-    report = validateAnswer(reply.reply, shabad.verses);
+    reply = await run([...messages, { role: "assistant", content: JSON.stringify(reply) }, { role: "user", content: correctionPrompt(report, language) }]);
+    report = validateAnswer(reply.reply, shabad.verses, check);
   }
   const sanitized = !report.ok;
-  const text = sanitized ? sanitizeAnswer(reply.reply, report) : reply.reply.trim();
+  const text = sanitized ? sanitizeAnswer(reply.reply, report, check) : reply.reply.trim();
 
   return {
     shabadId: shabad.shabadId,

@@ -128,6 +128,18 @@ describe("ask", () => {
     expect((await ask({ llm: general.llm, banidb: fakeBanidb() }, "Why do Sikhs wear a dastaar?")).sourceLabel).toBe(GENERAL_KNOWLEDGE_LABEL);
   });
 
+  it("answers in Punjabi when asked, with Punjabi labels", async () => {
+    const { llm, calls } = fakeLlm({
+      expand: () => expansion("history"),
+      judge: judgeAll(),
+      answer: [answer(`ਇਹ ਪੰਜਾਬੀ ਵਿਚ ਜਵਾਬ ਹੈ। [[verse:${hitA.verseId}]]`)],
+    });
+    const result = await ask({ llm, banidb: fakeBanidb() }, "1699 ਵਿਚ ਕੀ ਹੋਇਆ?", [], { language: "pa" });
+    expect(calls.find((c) => c.step === "answer")!.messages.at(-1)!.content).toContain("Punjabi");
+    expect(result.citationCheck.passedFirstTime).toBe(true);
+    expect(result.sourceLabel).toMatch(/[਀-੿]/);
+  });
+
   it("passes earlier turns to the answer model", async () => {
     const { llm, calls } = fakeLlm({ expand: () => expansion(), judge: judgeAll(), answer: [answer("More on that.")] });
     await ask({ llm, banidb: fakeBanidb() }, "Tell me more", [

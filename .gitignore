@@ -10,3 +10,4 @@ evals/results/
 .next/
 next-env.d.ts
 *.tsbuildinfo
+apps/api/data/

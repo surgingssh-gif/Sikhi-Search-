@@ -1,5 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
-import { BaniDbError, BaniDbNotFoundError, normalizeShabad, type JsonLlm, type RawShabadResponse } from "@ask-sikhi/core";
+import {
+  BaniDbError,
+  BaniDbNotFoundError,
+  normalizeShabad,
+  NotASikhTopicError,
+  type JsonLlm,
+  type LibraryEntry,
+  type NewsItem,
+  type RawShabadResponse,
+} from "@ask-sikhi/core";
+import { MemoryLibraryStore } from "../src/library-store";
 import { createApp, GURBANI_ATTRIBUTION } from "../src/app";
 import shabadFixture from "../../../packages/core/test/fixtures/shabad-1.json";
 
@@ -10,6 +20,8 @@ const banidbWith = (getShabad: (id: number) => Promise<typeof shabad>) => ({
   searchTranslations: emptySearch,
   getHukamnamaToday: async () => ({ date: "2026-10-24", shabads: [shabad] }),
   getAng: async (ang: number) => ({ ang, shabads: [] }),
+  getBanis: async () => [{ baniId: 2, name: "japujee saahib", gurmukhi: "ਜਪੁਜੀ ਸਾਹਿਬ" }],
+  getBani: async (id: number) => ({ baniId: id, name: "japujee saahib", gurmukhi: "ਜਪੁਜੀ ਸਾਹਿਬ", source: null, writer: null, raag: null, verses: [] }),
 });
 
 const post = (path: string, body: unknown, headers: Record<string, string> = {}) =>
@@ -149,6 +161,117 @@ describe("Discuss Gurbani routes", () => {
     const app = createApp({ banidb: banidbWith(async () => shabad), llm: discussLlm });
     expect((await app.request("/v1/discuss", post("/v1/discuss", { question: "What is this about?" }))).status).toBe(400);
     expect((await app.request("/v1/discuss", post("/v1/discuss", { shabadId: 1 }))).status).toBe(400);
+  });
+});
+
+describe("Library routes", () => {
+  const entry = (slug: string): LibraryEntry => ({
+    slug,
+    topic: slug,
+    title: "Zafarnama",
+    titleGurmukhi: "ਜ਼ਫ਼ਰਨਾਮਾ",
+    kind: "bani",
+    summary: "A letter.",
+    facts: [],
+    sections: [],
+    related: [],
+    sources: [{ title: "Example", url: "https://example.org", site: "example.org" }],
+    baniId: null,
+    generatedAt: "2026-10-25T00:00:00.000Z",
+    model: "fake",
+    reviewed: false,
+    usage: { costUsd: 0, searches: 0 },
+  });
+  const research = (topic: string) => post("/v1/library/research", { topic });
+
+  it("researches a topic once, then serves it from the store", async () => {
+    const fn = vi.fn(async () => entry("zafarnama"));
+    const store = new MemoryLibraryStore();
+    const app = createApp({ banidb: banidbWith(async () => shabad), library: { store, research: fn } });
+
+    const first = await app.request("/v1/library/research", research("Zafarnama letter"));
+    expect(first.status).toBe(200);
+    expect(((await first.json()) as { entry: LibraryEntry }).entry.slug).toBe("zafarnama");
+    await app.request("/v1/library/research", research("Zafarnama letter"));
+    expect(fn).toHaveBeenCalledTimes(1);
+
+    // Found by its own slug and by the topic that was typed.
+    expect((await app.request("/v1/library/zafarnama")).status).toBe(200);
+    expect((await app.request("/v1/library/zafarnama-letter")).status).toBe(200);
+    const list = (await (await app.request("/v1/library")).json()) as { entries: unknown[] };
+    expect(list.entries).toHaveLength(1);
+  });
+
+  it("runs one research job when several people ask at once", async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    const fn = vi.fn(async () => {
+      await gate;
+      return entry("chamkaur");
+    });
+    const app = createApp({ banidb: banidbWith(async () => shabad), library: { store: new MemoryLibraryStore(), research: fn } });
+    const a = app.request("/v1/library/research", research("Chamkaur"));
+    const b = app.request("/v1/library/research", research("Chamkaur"));
+    release();
+    expect((await a).status).toBe(200);
+    expect((await b).status).toBe(200);
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it("declines topics outside Sikhi", async () => {
+    const app = createApp({
+      banidb: banidbWith(async () => shabad),
+      library: { store: new MemoryLibraryStore(), research: async (t) => Promise.reject(new NotASikhTopicError(t)) },
+    });
+    const res = await app.request("/v1/library/research", research("best pizza"));
+    expect(res.status).toBe(422);
+    expect(await res.json()).toMatchObject({ error: "not_sikh_topic" });
+  });
+
+  it("returns 404 for unknown entries and 503 without research", async () => {
+    const app = createApp({ banidb: banidbWith(async () => shabad), library: { store: new MemoryLibraryStore() } });
+    expect((await app.request("/v1/library/nothing-here")).status).toBe(404);
+    expect((await app.request("/v1/library/research", research("Zafarnama"))).status).toBe(503);
+  });
+
+  it("lists banis and returns one", async () => {
+    const app = createApp({ banidb: banidbWith(async () => shabad) });
+    expect(await (await app.request("/v1/banis")).json()).toMatchObject({ banis: [{ baniId: 2 }] });
+    expect((await app.request("/v1/banis/2")).status).toBe(200);
+    expect((await app.request("/v1/banis/x")).status).toBe(400);
+  });
+});
+
+describe("News routes", () => {
+  const stubLlm: JsonLlm = { completeJson: async () => Promise.reject(new Error("unused")) };
+  const item = (id: string, categories: NewsItem["categories"]): NewsItem => ({
+    id,
+    title: `Story ${id}`,
+    url: `https://example.org/${id}`,
+    source: "Example",
+    feedId: "example",
+    language: "en",
+    publishedAt: null,
+    snippet: "",
+    categories,
+  });
+  const news = {
+    latest: async () => ({ items: [item("a", ["panth"]), item("b", ["punjab"]), item("c", ["panth", "diaspora"])], failed: [], fetchedAt: "2026-10-25T00:00:00.000Z" }),
+    briefingToday: async () => ({ generatedAt: "2026-10-25T00:00:00.000Z", bullets: [{ text: "A story.", itemIds: ["a"] }], usage: null }),
+  };
+
+  it("filters by category and limits", async () => {
+    const app = createApp({ banidb: banidbWith(async () => shabad), news });
+    const panth = (await (await app.request("/v1/news?category=panth")).json()) as { items: NewsItem[] };
+    expect(panth.items.map((i) => i.id)).toEqual(["a", "c"]);
+    const one = (await (await app.request("/v1/news?limit=1")).json()) as { items: NewsItem[] };
+    expect(one.items).toHaveLength(1);
+  });
+
+  it("serves the briefing only when a model is configured", async () => {
+    expect((await createApp({ banidb: banidbWith(async () => shabad), news }).request("/v1/news/briefing")).status).toBe(503);
+    const res = await createApp({ banidb: banidbWith(async () => shabad), news, llm: stubLlm }).request("/v1/news/briefing");
+    expect(await res.json()).toMatchObject({ bullets: [{ itemIds: ["a"] }] });
   });
 });
 

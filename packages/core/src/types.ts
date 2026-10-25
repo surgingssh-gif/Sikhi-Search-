@@ -93,3 +93,27 @@ export interface AngContents {
   ang: number;
   shabads: AngShabad[];
 }
+
+export interface BaniSummary {
+  baniId: number;
+  /** Transliterated name as BaniDB gives it, e.g. "japujee saahib". */
+  name: string;
+  gurmukhi: string;
+}
+
+export interface BaniVerse extends Verse {
+  /** Lines with the same paragraph number belong together. */
+  paragraph: number;
+  /** Heading lines (titles, mangal) rather than text. */
+  header: boolean;
+}
+
+export interface Bani {
+  baniId: number;
+  name: string;
+  gurmukhi: string;
+  source: Source | null;
+  writer: NamedRef | null;
+  raag: NamedRef | null;
+  verses: BaniVerse[];
+}

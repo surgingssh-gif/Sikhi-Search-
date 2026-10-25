@@ -1,7 +1,15 @@
-import type { AngContents, AngShabad, Hukamnama, SearchResult, Shabad, SourceId } from "../types";
+import type { AngContents, AngShabad, Bani, BaniSummary, Hukamnama, SearchResult, Shabad, SourceId } from "../types";
 import { BaniDbError, BaniDbNotFoundError } from "./errors";
 import { isHeadingVerse, normalizeSearch, normalizeShabad, normalizeVerse, primaryEnglish } from "./normalize";
-import type { RawAngResponse, RawErrorResponse, RawHukamnamaResponse, RawSearchResponse, RawShabadResponse } from "./raw-types";
+import type {
+  RawAngResponse,
+  RawBaniListItem,
+  RawBaniResponse,
+  RawErrorResponse,
+  RawHukamnamaResponse,
+  RawSearchResponse,
+  RawShabadResponse,
+} from "./raw-types";
 
 export interface BaniDbClientOptions {
   baseUrl?: string;
@@ -76,6 +84,33 @@ export class BaniDbClient {
     return {
       date: `${d.year}-${String(d.month).padStart(2, "0")}-${String(d.date).padStart(2, "0")}`,
       shabads: raw.shabads.map(normalizeShabad),
+    };
+  }
+
+  /** Every bani BaniDB provides (Japji Sahib, Jaap Sahib, Sukhmani Sahib, Ardas, ...). */
+  async getBanis(): Promise<BaniSummary[]> {
+    const raw = await this.getJson<RawBaniListItem[]>("/banis");
+    return raw.map((b) => ({ baniId: b.ID, name: b.transliterations?.english ?? b.token ?? "", gurmukhi: b.gurmukhiUni }));
+  }
+
+  async getBani(baniId: number): Promise<Bani> {
+    if (!Number.isInteger(baniId) || baniId < 1) throw new BaniDbNotFoundError(`Invalid bani id: ${baniId}`);
+    const raw = await this.getJson<RawBaniResponse>(`/banis/${baniId}`);
+    const info = raw.baniInfo;
+    const named = (r: { english: string; unicode?: string | null } | null | undefined, id: number | undefined) =>
+      r?.english && id != null ? { id, english: r.english, gurmukhi: r.unicode ?? null } : null;
+    return {
+      baniId: info.baniID,
+      name: info.english,
+      gurmukhi: info.unicode,
+      source: info.source ? { id: info.source.sourceId, english: info.source.english, gurmukhi: info.source.unicode ?? null } : null,
+      writer: named(info.writer, info.writer?.writerId),
+      raag: named(info.raag, info.raag?.raagId),
+      verses: raw.verses.map((v) => ({
+        ...normalizeVerse({ ...v.verse, shabadId: v.verse.shabadId ?? 0 }, info.source?.pageNo),
+        paragraph: v.paragraph,
+        header: v.header > 0,
+      })),
     };
   }
 

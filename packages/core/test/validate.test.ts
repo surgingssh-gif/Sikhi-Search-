@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findUncitedReferences, normalizeShabad, parseSegments, validateAnswer } from "../src";
+import { findUncitedReferences, normalizeShabad, parseSegments, sanitizeAnswer, validateAnswer } from "../src";
 import type { RawShabadResponse } from "../src/banidb/raw-types";
 import shabadFixture from "./fixtures/shabad-1.json";
 
@@ -48,6 +48,35 @@ describe("validateAnswer", () => {
 
   it("allows transliterated Sikh terms in Latin script", () => {
     expect(validateAnswer("Haumai and hukam are central ideas here.", verses).ok).toBe(true);
+  });
+});
+
+describe("validateAnswer in Punjabi", () => {
+  const pa = { gurmukhiProse: true };
+
+  it("accepts Punjabi prose with citations", () => {
+    const report = validateAnswer(`ਇਹ ਪੰਕਤੀ ਦੱਸਦੀ ਹੈ ਕਿ ਹਉਮੈ ਮਨੁੱਖ ਨੂੰ ਪਰਮਾਤਮਾ ਤੋਂ ਦੂਰ ਰੱਖਦੀ ਹੈ। [[verse:${v2.verseId}]]`, verses, pa);
+    expect(report.ok).toBe(true);
+  });
+
+  it("flags a copied Gurbani line by its ॥ verse marker", () => {
+    const report = validateAnswer(`ਗੁਰੂ ਸਾਹਿਬ ਲਿਖਦੇ ਹਨ: ${v2.gurmukhi} [[verse:${v2.verseId}]]`, verses, pa);
+    expect(report.ok).toBe(false);
+    expect(report.strayGurmukhi.join(" ")).toContain(v2.gurmukhi.replace(/॥.*$/, "").trim().split(" ")[0]);
+  });
+
+  it("flags Gurmukhi inside quotation marks", () => {
+    const report = validateAnswer(`ਜਿਵੇਂ ਕਿਹਾ ਗਿਆ ਹੈ "ਸਚੁ ਸੁਣਾਇਸੀ ਸਚ ਕੀ ਬੇਲਾ" ਇਹੀ ਸੱਚ ਹੈ।`, verses, pa);
+    expect(report.strayGurmukhi).toEqual([`"ਸਚੁ ਸੁਣਾਇਸੀ ਸਚ ਕੀ ਬੇਲਾ"`]);
+  });
+
+  it("removes only the flagged text when cleaning up", () => {
+    const text = `ਇਹ ਪੰਜਾਬੀ ਵਿਆਖਿਆ ਹੈ। "ਕਖਗ ਘਙ" ਬਾਕੀ ਵਿਆਖਿਆ।`;
+    const report = validateAnswer(text, verses, pa);
+    const cleaned = sanitizeAnswer(text, report, pa);
+    expect(cleaned).toContain("ਇਹ ਪੰਜਾਬੀ ਵਿਆਖਿਆ ਹੈ।");
+    expect(cleaned).toContain("ਬਾਕੀ ਵਿਆਖਿਆ।");
+    expect(cleaned).not.toContain("ਕਖਗ");
   });
 });
 

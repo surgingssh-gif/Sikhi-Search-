@@ -50,7 +50,19 @@ export function parseSegments(answer: string): Segment[] {
   return segments;
 }
 
-export function validateAnswer(answer: string, retrieved: Iterable<Verse>): CitationReport {
+export interface ValidateOptions {
+  /**
+   * The answer is written in Punjabi, so Gurmukhi prose is expected. Only text
+   * that looks like Gurbani is flagged: anything with the ॥ verse marker or ੴ,
+   * and Gurmukhi inside quotation marks.
+   */
+  gurmukhiProse?: boolean;
+}
+
+/** Gurmukhi that looks like quoted or copied Gurbani rather than Punjabi prose. */
+const GURBANI_LIKE = /[^\n.!?।]*[॥ੴ][^\n.!?।]*|[“"‘'][^“”"‘’']*[਀-੿][^“”"‘’']*[”"’']/g;
+
+export function validateAnswer(answer: string, retrieved: Iterable<Verse>, options: ValidateOptions = {}): CitationReport {
   const byId = new Map<number, Verse>();
   for (const v of retrieved) byId.set(v.verseId, v);
 
@@ -68,9 +80,9 @@ export function validateAnswer(answer: string, retrieved: Iterable<Verse>): Cita
   }
 
   const proseText = prose.join(" ");
-  const strayGurmukhi = [...proseText.matchAll(GURMUKHI_RUN)]
+  const strayGurmukhi = [...proseText.matchAll(options.gurmukhiProse ? GURBANI_LIKE : GURMUKHI_RUN)]
     .map((m) => m[0].trim())
-    .filter((s) => s.length > 0);
+    .filter((s) => s.length > 0 && (!options.gurmukhiProse || /[਀-੿]/.test(s)));
 
   const citedAngs = new Set(cited.map((id) => byId.get(id)!.ang));
   const angMismatches = [...new Set([...proseText.matchAll(ANG_MENTION)].map((m) => Number(m[1])))].filter(
@@ -119,14 +131,16 @@ export function findUncitedReferences(answer: string): string[] {
  * drops unknown citation markers, model-written Gurmukhi and wrong Ang mentions.
  * Valid citation markers are left in place.
  */
-export function sanitizeAnswer(answer: string, report: CitationReport): string {
+export function sanitizeAnswer(answer: string, report: CitationReport, options: ValidateOptions = {}): string {
   const unknown = new Set(report.unknownCitations);
   const badAngs = new Set(report.angMismatches);
+  // In Punjabi answers remove only the flagged Gurbani-like passages, never the prose around them.
+  const dropGurmukhi = (t: string) =>
+    options.gurmukhiProse ? report.strayGurmukhi.reduce((acc, s) => acc.split(s).join(""), t) : t.replace(GURMUKHI_RUN, "");
   return parseSegments(answer)
     .map((seg) => {
       if (seg.type === "citation") return unknown.has(seg.verseId) ? "" : `[[verse:${seg.verseId}]]`;
-      return seg.text
-        .replace(GURMUKHI_RUN, "")
+      return dropGurmukhi(seg.text)
         .replace(ANG_MENTION, (m, n: string) => (badAngs.has(Number(n)) ? "" : m));
     })
     .join("")

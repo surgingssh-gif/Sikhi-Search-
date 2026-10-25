@@ -25,6 +25,9 @@ export {
   parseSegments,
   CITATION_PATTERN,
   type CitationReport,
+  type ValidateOptions,
   type Segment,
 } from "./citations/validate";
 export { discuss, describeShabad, DISCUSS_SYSTEM, DiscussSchema, type DiscussResult } from "./pipeline/discuss";
+export * from "./library/research";
+export * from "./news/news";

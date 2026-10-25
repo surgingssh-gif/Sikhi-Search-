@@ -1,6 +1,7 @@
 import type { AskResult, ExploreResult, Segment } from "@/lib/api";
 import { CitedProse as Prose } from "./CitedProse";
 import { CopyButton } from "./CopyButton";
+import { useT } from "./Language";
 import { GurbaniCard } from "./GurbaniCard";
 
 const cardId = (prefix: string, n: number) => `${prefix}-p${n}`;
@@ -65,12 +66,13 @@ export function AnswerView({
   onFollowUp: (q: string) => void;
   busy: boolean;
 }) {
+  const t = useT();
   const numbers = new Map(result.passages.map((p, i) => [p.verseId, i + 1]));
   return (
     <>
       <section className="answer-card" aria-label="Answer">
         <div className="answer-head">
-          <p className="answer-label">Answer</p>
+          <p className="answer-label">{t("answer")}</p>
           <CopyButton text={() => answerAsText(result)} />
         </div>
         <p className="summary">
@@ -89,7 +91,7 @@ export function AnswerView({
 
       {result.passages.length > 0 && (
         <section aria-label="Gurbani behind this answer">
-          <p className="section-title">Gurbani behind this answer</p>
+          <p className="section-title">{t("gurbaniBehind")}</p>
           <div className="passages">
             {result.passages.map((p, i) => (
               <GurbaniCard key={p.verseId} passage={p} number={i + 1} id={cardId(prefix, i + 1)} />
@@ -116,7 +118,7 @@ export function AnswerView({
 
       {result.followUps.length > 0 && (
         <section className="related" aria-label="Related questions">
-          <p className="section-title">Related</p>
+          <p className="section-title">{t("related")}</p>
           <ul>
             {result.followUps.map((f) => (
               <li key={f}>

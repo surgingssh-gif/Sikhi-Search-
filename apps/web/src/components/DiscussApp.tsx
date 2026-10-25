@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { discussStream, friendlyError, type ChatTurn, type DiscussResult, type Shabad, type Stage } from "@/lib/api";
 import { englishOf, isHeading } from "@/lib/shabad";
 import { Arrow } from "./AnswerView";
+import { useLanguage, useT } from "./Language";
 import { CitedProse } from "./CitedProse";
 import { Progress } from "./Progress";
 
@@ -18,6 +19,8 @@ const STARTERS = [
 ];
 
 export function DiscussApp({ shabad }: { shabad: Shabad }) {
+  const { lang } = useLanguage();
+  const t = useT();
   const [exchanges, setExchanges] = useState<Exchange[]>([]);
   const [draft, setDraft] = useState("");
   const [flash, setFlash] = useState<number | null>(null);
@@ -66,7 +69,7 @@ export function DiscussApp({ shabad }: { shabad: Shabad }) {
     setDraft("");
     if (textarea.current) textarea.current.style.height = "auto";
     try {
-      update(id, { result: await discussStream(shabad.shabadId, q, past, (stage) => update(id, { stage })) });
+      update(id, { result: await discussStream(shabad.shabadId, q, past, (stage) => update(id, { stage }), lang) });
     } catch (err) {
       update(id, { error: friendlyError(err) });
     }
@@ -81,11 +84,11 @@ export function DiscussApp({ shabad }: { shabad: Shabad }) {
   return (
     <main className="wrap">
       <header className="reader-head">
-        <Link href="/discuss" className="back-link">
+        <Link href="/gurbani" className="back-link">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
             <path d="M10 3.5 5.5 8l4.5 4.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
-          Discuss Gurbani
+          {t("gurbani")}
         </Link>
         <h1>
           Ang {shabad.ang}
@@ -207,7 +210,7 @@ export function DiscussApp({ shabad }: { shabad: Shabad }) {
               rows={1}
               value={draft}
               maxLength={500}
-              placeholder={exchanges.length ? "Keep discussing…" : "Ask anything about this shabad…"}
+              placeholder={exchanges.length ? t("keepDiscussing") : t("discussPlaceholder")}
               style={{ flex: 1 }}
               onChange={(e) => {
                 setDraft(e.target.value);

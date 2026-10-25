@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { askStream, friendlyError, type AskResult, type ChatTurn, type ExploreResult, type Mode, type Stage } from "@/lib/api";
 import { AnswerView, ExploreView } from "./AnswerView";
+import { useLanguage, useT } from "./Language";
 import { Progress } from "./Progress";
 
 type Exchange = {
@@ -15,30 +15,28 @@ type Exchange = {
   error?: string;
 };
 
-export interface HukamnamaTeaser {
-  shabadId: number;
-  ang: number;
-  writer: string | null;
-  raag: string | null;
-}
+const SUGGESTED = {
+  en: [
+    "How do I live in Hukam when life feels unfair?",
+    "What does Gurbani mean by dying while alive?",
+    "How can I keep simran going through a busy day?",
+    "What does Gurbani say to someone grieving a loss?",
+    "What is Miri Piri, and how should it shape my life?",
+    "Why does Gurbani keep returning to haumai?",
+  ],
+  pa: [
+    "ਜਦੋਂ ਜ਼ਿੰਦਗੀ ਨਾਇਨਸਾਫ਼ੀ ਲੱਗੇ, ਹੁਕਮ ਵਿੱਚ ਕਿਵੇਂ ਰਹੀਏ?",
+    "ਜੀਵਤ ਮਰਨ ਦਾ ਗੁਰਬਾਣੀ ਵਿੱਚ ਕੀ ਅਰਥ ਹੈ?",
+    "ਰੁਝੇਵੇਂ ਭਰੇ ਦਿਨ ਵਿੱਚ ਸਿਮਰਨ ਕਿਵੇਂ ਜਾਰੀ ਰੱਖੀਏ?",
+    "ਕਿਸੇ ਦੇ ਵਿਛੋੜੇ ਦੇ ਦੁੱਖ ਵਿੱਚ ਗੁਰਬਾਣੀ ਕੀ ਕਹਿੰਦੀ ਹੈ?",
+    "ਮੀਰੀ ਪੀਰੀ ਕੀ ਹੈ ਅਤੇ ਇਹ ਸਾਡੇ ਜੀਵਨ ਨੂੰ ਕਿਵੇਂ ਘੜੇ?",
+    "ਗੁਰਬਾਣੀ ਵਾਰ-ਵਾਰ ਹਉਮੈ ਦੀ ਗੱਲ ਕਿਉਂ ਕਰਦੀ ਹੈ?",
+  ],
+};
 
-const SUGGESTED = [
-  "What is Hukam?",
-  "How does Gurbani explain ego (haumai)?",
-  "I keep comparing myself to others. What does Sikhi teach?",
-  "What does Sikhi teach about anxiety and worry?",
-  "What is the significance of Vaisakhi?",
-  "Why is seva important in Sikhi?",
-];
-
-const MODES: { mode: Mode; label: string; hint: string; placeholder: string }[] = [
-  { mode: "ask", label: "Answer", hint: "A clear answer, with the Gurbani behind it.", placeholder: "Ask anything about Sikhi…" },
-  {
-    mode: "explore",
-    label: "Gurbani only",
-    hint: "Just the most relevant Gurbani, with a short note on each.",
-    placeholder: "What would you like to find in Gurbani?",
-  },
+const MODES: { mode: Mode; label: string; hint: string }[] = [
+  { mode: "ask", label: "Answer", hint: "An answer with the Gurbani behind it." },
+  { mode: "explore", label: "Gurbani only", hint: "Just the most relevant Gurbani, with a short note on each." },
 ];
 
 /** Conversation memory sent with each question. Kept only in this tab; the server stores nothing. */
@@ -61,16 +59,9 @@ function SendIcon() {
   );
 }
 
-function Check() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.3" />
-      <path d="M5 8.2 7 10.2 11 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-export function AskApp({ hukamnama }: { hukamnama: HukamnamaTeaser | null }) {
+export function AskApp({ initialQuestion }: { initialQuestion?: string }) {
+  const { lang } = useLanguage();
+  const t = useT();
   const [exchanges, setExchanges] = useState<Exchange[]>([]);
   const [draft, setDraft] = useState("");
   const [mode, setMode] = useState<Mode>("ask");
@@ -78,6 +69,7 @@ export function AskApp({ hukamnama }: { hukamnama: HukamnamaTeaser | null }) {
   const nextId = useRef(1);
   const latest = useRef<HTMLElement>(null);
   const textarea = useRef<HTMLTextAreaElement>(null);
+  const askedInitial = useRef(false);
   const started = exchanges.length > 0;
   const current = MODES.find((m) => m.mode === mode)!;
 
@@ -85,6 +77,15 @@ export function AskApp({ hukamnama }: { hukamnama: HukamnamaTeaser | null }) {
   useEffect(() => {
     if (started) latest.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [exchanges.length, started]);
+
+  // A question passed from another page (Today, Library) is asked straight away.
+  useEffect(() => {
+    if (initialQuestion && !askedInitial.current) {
+      askedInitial.current = true;
+      void submit(initialQuestion);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialQuestion]);
 
   function update(id: number, patch: Partial<Exchange>) {
     setExchanges((xs) => xs.map((x) => (x.id === id ? { ...x, ...patch } : x)));
@@ -99,7 +100,7 @@ export function AskApp({ hukamnama }: { hukamnama: HukamnamaTeaser | null }) {
     setDraft("");
     if (textarea.current) textarea.current.style.height = "auto";
     try {
-      const result = await askStream(asMode, q, history, (stage) => update(id, { stage }));
+      const result = await askStream(asMode, q, history, (stage) => update(id, { stage }), lang);
       update(id, { result });
     } catch (err) {
       update(id, { error: friendlyError(err) });
@@ -128,7 +129,7 @@ export function AskApp({ hukamnama }: { hukamnama: HukamnamaTeaser | null }) {
         rows={started ? 1 : 2}
         value={draft}
         maxLength={500}
-        placeholder={started ? (mode === "ask" ? "Ask a follow-up…" : "Find more Gurbani…") : current.placeholder}
+        placeholder={started ? t("followUpPlaceholder") : t("askPlaceholder")}
         onChange={(e) => {
           setDraft(e.target.value);
           e.target.style.height = "auto";
@@ -160,41 +161,22 @@ export function AskApp({ hukamnama }: { hukamnama: HukamnamaTeaser | null }) {
     return (
       <main className="wrap">
         <section className="hero">
-          <p className="eyebrow">Learn Sikhi through Gurbani</p>
-          <h1>What would you like to learn about Sikhi?</h1>
-          <p>Ask in your own words. You&apos;ll get a clear answer and the Gurbani behind it, each line shown with its Ang.</p>
+          <p className="eyebrow">{t("vichaar")}</p>
+          <h1>{lang === "pa" ? "ਕੀ ਵਿਚਾਰ ਕਰਨਾ ਚਾਹੋਗੇ?" : "What would you like to reflect on?"}</h1>
+          <p>
+            {lang === "pa"
+              ? "ਆਪਣੇ ਸ਼ਬਦਾਂ ਵਿੱਚ ਪੁੱਛੋ। ਜਵਾਬ ਦੇ ਨਾਲ ਉਸ ਪਿੱਛੇ ਦੀ ਗੁਰਬਾਣੀ ਵੀ ਮਿਲੇਗੀ, ਹਰ ਪੰਕਤੀ ਆਪਣੇ ਅੰਗ ਸਮੇਤ।"
+              : "Ask in your own words. You'll get an answer and the Gurbani behind it, each line with its Ang."}
+          </p>
         </section>
-
         {composer}
         <p className="mode-hint" aria-live="polite">
           {current.hint}
         </p>
-
-        {hukamnama && (
-          <Link className="hukam-strip" href={`/discuss/${hukamnama.shabadId}`}>
-            <span className="hukam-icon" aria-hidden="true">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5Z" />
-                <path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5" />
-              </svg>
-            </span>
-            <span className="hukam-text">
-              <strong>Today&apos;s Hukamnama</strong>
-              <span>{["Ang " + hukamnama.ang, hukamnama.writer, hukamnama.raag].filter(Boolean).join(" · ")}</span>
-            </span>
-            <span className="hukam-go">
-              <span>Discuss</span>
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </span>
-          </Link>
-        )}
-
         <section className="suggest" aria-label="Suggested questions">
-          <p className="section-title">Try asking</p>
-          <ul className="suggest-grid">
-            {SUGGESTED.map((s) => (
+          <p className="section-title">{lang === "pa" ? "ਇਹ ਪੁੱਛ ਕੇ ਵੇਖੋ" : "Try asking"}</p>
+          <ul className="suggest-grid" lang={lang === "pa" ? "pa" : undefined}>
+            {SUGGESTED[lang].map((s) => (
               <li key={s}>
                 <button type="button" onClick={() => void submit(s)}>
                   {s}
@@ -203,30 +185,6 @@ export function AskApp({ hukamnama }: { hukamnama: HukamnamaTeaser | null }) {
             ))}
           </ul>
         </section>
-
-        <ul className="trust" aria-label="How answers work">
-          <li>
-            <Check />
-            <span>
-              <strong>Real Gurbani only</strong>
-              Every line comes from BaniDB, never written by AI.
-            </span>
-          </li>
-          <li>
-            <Check />
-            <span>
-              <strong>Always in context</strong>
-              Each passage links to its full shabad.
-            </span>
-          </li>
-          <li>
-            <Check />
-            <span>
-              <strong>A guide, not an authority</strong>
-              Interpretation is marked as such.
-            </span>
-          </li>
-        </ul>
       </main>
     );
   }

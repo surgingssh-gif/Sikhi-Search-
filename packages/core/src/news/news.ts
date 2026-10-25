@@ -134,7 +134,10 @@ const BriefingSchema = z.object({
 });
 
 const BRIEFING_SYSTEM = `You write a short daily news briefing for Ask Sikhi, read by Sikhs around the world.
-You are given recent headlines with short snippets from Sikh and Punjab news outlets. Write 4-6 bullets covering the most significant stories for the Sikh community and Punjab, most important first.
+You are given recent headlines with short snippets from Sikh and Punjab news outlets. Write 4-6 bullets for Sikhs who want to know what is happening in the Panth and in Punjab.
+- Lead with Panthic stories: the Sikh community, gurdwaras, the SGPC and Akal Takht, Sikh rights and the diaspora. Then the most significant Punjab stories (politics, farmers, water, the economy, drugs policy).
+- Skip routine crime, accidents and local civic news unless it significantly affects Sikhs or Punjab as a whole.
+- One story per bullet. Never combine unrelated stories into one bullet.
 - Use only what the headlines and snippets say. Do not add facts, numbers, causes or predictions.
 - Attribute claims that come from one side ("according to Sikh Siyasat", "the SGPC said").
 - Neutral, plain language. Name violence or discrimination against Sikhs plainly when a headline reports it.
@@ -210,7 +213,10 @@ export class NewsService {
     if (this.briefing && this.now() - this.briefing.at < 3 * 60 * 60 * 1000) return this.briefing.value;
     this.briefingPending ??= (async () => {
       const { items } = await this.latest();
-      const recent = items.filter((i) => i.language === "en").slice(0, 24);
+      // Panthic stories first so they are never crowded out, then Punjab.
+      const english = items.filter((i) => i.language === "en");
+      const panthic = english.filter((i) => i.categories.includes("panth")).slice(0, 14);
+      const recent = [...panthic, ...english.filter((i) => !i.categories.includes("panth")).slice(0, 12)];
       if (recent.length === 0) return { generatedAt: new Date(this.now()).toISOString(), bullets: [], usage: null };
       const list = recent.map((i) => `[${i.id}] ${i.source}: ${i.title}${i.snippet ? ` — ${i.snippet}` : ""}`).join("\n");
       const { data, usage } = await llm.completeJson({

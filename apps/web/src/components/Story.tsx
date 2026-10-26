@@ -12,7 +12,7 @@ export function timeAgo(iso: string | null, now = Date.now()): string {
   return days === 1 ? "yesterday" : `${days} days ago`;
 }
 
-export const CATEGORY_LABEL: Record<string, string> = { panth: "Panth", punjab: "Punjab", diaspora: "Diaspora" };
+export const CATEGORY_LABEL: Record<string, string> = { panth: "Sikhi", punjab: "Punjab", diaspora: "Diaspora" };
 
 /** The label above a headline: where it happened, else its section. */
 function kicker(item: NewsItem): string {

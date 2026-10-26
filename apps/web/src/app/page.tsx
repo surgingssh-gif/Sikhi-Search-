@@ -7,14 +7,14 @@ import { getHukamnama, getNews, type NewsItem } from "@/lib/api";
 import { NEWS_SECTIONS, picker } from "@/lib/sections";
 import { englishOf, openingLines } from "@/lib/shabad";
 
-function Band({ id, items }: { id: string; items: NewsItem[] }) {
+function Band({ id, section, title, items }: { id: string; section: string; title?: string; items: NewsItem[] }) {
   if (!items.length) return null;
-  const section = NEWS_SECTIONS[id]!;
+  const { title: name } = NEWS_SECTIONS[section]!;
   return (
     <section className="section-band" aria-labelledby={`band-${id}`}>
       <div className="band-head">
-        <h2 id={`band-${id}`}>{section.title}</h2>
-        <Link href={`/section/${id}`}>More in {section.title} ›</Link>
+        <h2 id={`band-${id}`}>{title ?? name}</h2>
+        <Link href={`/section/${section}`}>More in {name} ›</Link>
       </div>
       <div className="card-grid">
         {items.map((item, n) => (
@@ -29,19 +29,28 @@ export default async function FrontPage() {
   const [hukamnama, news] = await Promise.all([getHukamnama(), getNews(200)]);
   const items = news?.items ?? [];
   const take = picker(items);
-  const panthic = (i: NewsItem) => i.categories.includes("panth");
+  const sikh = (i: NewsItem) => i.categories.includes("panth");
+  const photo = (i: NewsItem) => !!i.image;
 
-  // The lead is the newest Panthic story with a photo; the rail is the next few.
-  // English stories take the top slots; Punjabi ones run in the sections below.
-  const top = (i: NewsItem) => !!i.image && i.language === "en";
-  const lead = take(1, (i) => panthic(i) && top(i))[0] ?? take(1, top)[0] ?? take(1)[0];
-  const rail = take(3, top);
-  const bands = {
-    panth: take(4, (i) => panthic(i) && !!i.image),
-    punjab: take(4, (i) => i.categories.includes("punjab") && !!i.image),
-    diaspora: take(4, (i) => i.categories.includes("diaspora") && !!i.image),
+  // Sikh news leads the paper. English stories take the top slots; Punjabi ones run below.
+  // If there's little Sikh news, the top falls back to any story with a photo.
+  const top = (i: NewsItem) => photo(i) && i.language === "en";
+  const lead = take(1, (i) => sikh(i) && top(i))[0] ?? take(1, top)[0] ?? take(1)[0];
+  // Takes `count` stories passing the first test, topping up from the next ones.
+  const fill = (count: number, ...tests: ((i: NewsItem) => boolean)[]) => {
+    const out: NewsItem[] = [];
+    for (const test of tests) out.push(...take(count - out.length, test));
+    return out;
   };
-  const latest = take(10);
+  const rail = fill(3, (i) => sikh(i) && top(i), top);
+  const home = (i: NewsItem) => sikh(i) && !i.categories.includes("diaspora");
+  const bands = {
+    sikhi: fill(4, (i) => home(i) && top(i), (i) => home(i) && photo(i)),
+    world: take(4, (i) => sikh(i) && photo(i) && i.categories.includes("diaspora")),
+    // Punjab stories that aren't already Sikh news.
+    punjab: take(4, (i) => i.categories.includes("punjab") && !sikh(i) && photo(i)),
+  };
+  const latest = take(10, sikh);
   const today = hukamnama?.shabads[0];
 
   if (!lead) {
@@ -66,7 +75,7 @@ export default async function FrontPage() {
         </div>
       </div>
 
-      <Band id="panth" items={bands.panth} />
+      <Band id="sikhi" section="sikhi" title="More Sikh news" items={bands.sikhi} />
 
       <section className="section-band modules" aria-label="Map, Hukamnama and Vichaar">
         <div className="module">
@@ -114,14 +123,14 @@ export default async function FrontPage() {
         </div>
       </section>
 
-      <Band id="punjab" items={bands.punjab} />
-      <Band id="diaspora" items={bands.diaspora} />
+      <Band id="world" section="sikhi" title="Sikhs around the world" items={bands.world} />
+      <Band id="punjab" section="punjab" items={bands.punjab} />
 
       {latest.length > 0 && (
         <section className="section-band" aria-labelledby="band-latest">
           <div className="band-head">
-            <h2 id="band-latest">Latest</h2>
-            <Link href="/section/latest">All stories ›</Link>
+            <h2 id="band-latest">Latest Sikh news</h2>
+            <Link href="/section/sikhi">All Sikh news ›</Link>
           </div>
           <ul className="latest-list">
             {latest.map((item) => (

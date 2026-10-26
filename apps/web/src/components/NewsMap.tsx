@@ -120,7 +120,7 @@ export function MiniMap({ items }: { items: NewsItem[] }) {
   );
 }
 
-const FILTERS: (NewsCategory | "all")[] = ["all", "panth", "punjab", "diaspora"];
+const FILTERS: (NewsCategory | "all")[] = ["all", "panth", "punjab"];
 
 /** The full story map: pins by place, a list of stories beside it. */
 export function NewsMap({ items, initialPlace }: { items: NewsItem[]; initialPlace?: string }) {

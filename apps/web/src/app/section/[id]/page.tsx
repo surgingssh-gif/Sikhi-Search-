@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Story } from "@/components/Story";
 import { getNews } from "@/lib/api";
-import { NEWS_SECTIONS, photoFirst } from "@/lib/sections";
+import { MOVED_SECTIONS, NEWS_SECTIONS, photoFirst } from "@/lib/sections";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -13,6 +13,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function SectionPage({ params }: Props) {
   const { id } = await params;
+  if (MOVED_SECTIONS[id]) redirect(`/section/${MOVED_SECTIONS[id]}`);
   const section = NEWS_SECTIONS[id];
   if (!section) notFound();
   const news = await getNews(200, section.category);

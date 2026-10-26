@@ -10,6 +10,7 @@ export const SECTIONS: { href: string; label: string; key?: StringKey; match: (p
   { href: "/", label: "Front Page", match: (p) => p === "/" },
   { href: "/section/sikhi", label: "Sikhi", match: (p) => p === "/section/sikhi" },
   { href: "/section/punjab", label: "Punjab", match: (p) => p === "/section/punjab" },
+  { href: "/history", label: "History", key: "history", match: (p) => p.startsWith("/history") },
   { href: "/map", label: "Map", match: (p) => p.startsWith("/map") },
   { href: "/vichaar", label: "Vichaar", key: "vichaar", match: (p) => p.startsWith("/vichaar") || p.startsWith("/discuss") },
   { href: "/library", label: "Library", key: "library", match: (p) => p.startsWith("/library") },

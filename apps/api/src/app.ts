@@ -11,6 +11,8 @@ import {
   explore,
   LlmRefusalError,
   NotASikhTopicError,
+  HISTORY_EVENTS,
+  eventsAround,
   slugify,
   type BaniDbClient,
   type JsonLlm,
@@ -105,6 +107,16 @@ export function createApp({ banidb, llm, library, news, allowedOrigins = [], aiR
     const briefing = await news.briefingToday();
     c.header("cache-control", "public, max-age=600");
     return c.json({ generatedAt: briefing.generatedAt, bullets: briefing.bullets });
+  });
+
+  app.get("/v1/history", (c) => {
+    // With ?date=YYYY-MM-DD: anniversaries around that day. Without: every event.
+    const date = c.req.query("date");
+    c.header("cache-control", "public, max-age=3600");
+    if (!date) return c.json({ events: HISTORY_EVENTS });
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(date))) return c.json({ error: "invalid_date" }, 400);
+    const range = (v: string | undefined) => Math.min(Math.max(Number(v ?? 7) || 0, 0), 31);
+    return c.json({ events: eventsAround(date, range(c.req.query("before")), range(c.req.query("after"))) });
   });
 
   app.get("/v1/library", async (c) => {

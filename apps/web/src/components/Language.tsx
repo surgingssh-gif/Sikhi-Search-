@@ -47,6 +47,7 @@ const STRINGS = {
   news: { en: "News", pa: "ਖ਼ਬਰਾਂ" },
   map: { en: "Map", pa: "ਨਕਸ਼ਾ" },
   gurbani: { en: "Gurbani", pa: "ਗੁਰਬਾਣੀ" },
+  history: { en: "History", pa: "ਇਤਿਹਾਸ" },
   answer: { en: "Answer", pa: "ਜਵਾਬ" },
   related: { en: "Related", pa: "ਹੋਰ ਸਵਾਲ" },
   gurbaniBehind: { en: "Gurbani behind this answer", pa: "ਇਸ ਜਵਾਬ ਪਿੱਛੇ ਗੁਰਬਾਣੀ" },

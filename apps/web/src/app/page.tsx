@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { BriefingBox } from "@/components/BriefingBox";
+import { HistoryBox } from "@/components/HistoryWeek";
 import { MiniMap } from "@/components/MapLoader";
 import { QuickAsk } from "@/components/QuickAsk";
 import { Story } from "@/components/Story";
-import { getHukamnama, getNews, type NewsItem } from "@/lib/api";
+import { getHistory, getHukamnama, getNews, type NewsItem } from "@/lib/api";
 import { NEWS_SECTIONS, picker } from "@/lib/sections";
 import { englishOf, openingLines } from "@/lib/shabad";
 
@@ -26,7 +27,7 @@ function Band({ id, section, title, items }: { id: string; section: string; titl
 }
 
 export default async function FrontPage() {
-  const [hukamnama, news] = await Promise.all([getHukamnama(), getNews(200)]);
+  const [hukamnama, news, history] = await Promise.all([getHukamnama(), getNews(200), getHistory()]);
   const items = news?.items ?? [];
   const take = picker(items);
   const sikh = (i: NewsItem) => i.categories.includes("panth");
@@ -122,6 +123,16 @@ export default async function FrontPage() {
           </p>
         </div>
       </section>
+
+      {history.length > 0 && (
+        <section className="section-band" aria-labelledby="band-history">
+          <div className="band-head">
+            <h2 id="band-history">This week in Sikh history</h2>
+            <Link href="/history">More Sikh history ›</Link>
+          </div>
+          <HistoryBox events={history} />
+        </section>
+      )}
 
       <Band id="world" section="sikhi" title="Sikhs around the world" items={bands.world} />
       <Band id="punjab" section="punjab" items={bands.punjab} />

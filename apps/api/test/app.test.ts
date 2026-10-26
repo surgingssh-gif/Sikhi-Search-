@@ -286,3 +286,19 @@ describe("CORS", () => {
     expect(other.headers.get("access-control-allow-origin")).toBeNull();
   });
 });
+
+describe("GET /v1/history", () => {
+  const app = createApp({ banidb: banidbWith(async () => null as never) });
+
+  it("lists anniversaries around a date", async () => {
+    const res = await app.request("/v1/history?date=2026-11-01&before=1&after=0");
+    expect(res.status).toBe(200);
+    const { events } = (await res.json()) as { events: { id: string; daysAway: number }[] };
+    expect(events.map((e) => e.id)).toEqual(expect.arrayContaining(["indira-gandhi-assassination", "november-1984", "punjab-reorganised"]));
+    expect(events.every((e) => e.daysAway <= 0 && e.daysAway >= -1)).toBe(true);
+  });
+
+  it("rejects a malformed date", async () => {
+    expect((await app.request("/v1/history?date=yesterday")).status).toBe(400);
+  });
+});

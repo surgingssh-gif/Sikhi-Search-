@@ -6,6 +6,7 @@ import type {
   ChatTurn,
   DiscussResult,
   ExploreResult,
+  HistoryEvent,
   Hukamnama,
   LibraryEntry,
   NewsItem,
@@ -27,6 +28,8 @@ export type {
   ChatTurn,
   DiscussResult,
   ExploreResult,
+  DatedHistoryEvent,
+  HistoryEvent,
   Hukamnama,
   Passage,
   PassageLine,
@@ -209,6 +212,11 @@ export async function fetchBriefing(): Promise<NewsBriefingResponse | null> {
   } catch {
     return null;
   }
+}
+
+/** Every dated event in Sikh history (a short, fixed list). */
+export async function getHistory(): Promise<HistoryEvent[]> {
+  return (await serverGet<{ events: HistoryEvent[] }>("/v1/history", 3600))?.events ?? [];
 }
 
 export interface LibraryIndexItem {

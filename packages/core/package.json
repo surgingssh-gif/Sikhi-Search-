@@ -5,7 +5,8 @@
   "type": "module",
   "description": "Framework-free core for Ask Sikhi: BaniDB client, Gurbani types, citation validation.",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./history": "./src/history/events.ts"
   },
   "scripts": {
     "test": "vitest run",

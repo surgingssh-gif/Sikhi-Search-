@@ -24,6 +24,12 @@ const ICONS: Record<string, React.ReactNode> = {
       <path d="M17 9h3v10a1 1 0 0 1-1 1h-2M7.5 9h6M7.5 12.5h6M7.5 16h4" />
     </>
   ),
+  history: (
+    <>
+      <circle cx="12" cy="12" r="8" />
+      <path d="M12 7.5V12l3 2" />
+    </>
+  ),
   gurbani: (
     <>
       <path d="M12 6.5C10 5 7.5 4.5 4 4.5v13c3.5 0 6 .5 8 2 2-1.5 4.5-2 8-2v-13c-3.5 0-6 .5-8 2Z" />
@@ -35,6 +41,7 @@ const ICONS: Record<string, React.ReactNode> = {
 export const NAV: { href: string; key: StringKey; match: (p: string) => boolean }[] = [
   { href: "/", key: "news", match: (p) => p === "/" || p.startsWith("/section") || p.startsWith("/news") },
   { href: "/map", key: "map", match: (p) => p.startsWith("/map") },
+  { href: "/history", key: "history", match: (p) => p.startsWith("/history") },
   { href: "/vichaar", key: "vichaar", match: (p) => p.startsWith("/vichaar") || p.startsWith("/discuss") },
   { href: "/library", key: "library", match: (p) => p.startsWith("/library") },
   { href: "/gurbani", key: "gurbani", match: (p) => p.startsWith("/gurbani") || p.startsWith("/shabad") },

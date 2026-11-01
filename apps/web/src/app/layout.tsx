@@ -13,7 +13,7 @@ const blackletter = UnifrakturMaguntia({ subsets: ["latin"], weight: "400", vari
 const gurmukhi = Noto_Serif_Gurmukhi({ subsets: ["gurmukhi"], variable: "--font-gurmukhi", display: "swap" });
 
 export const metadata: Metadata = {
-  title: { default: "Ask Sikhi: Sikh news, Punjab and Gurbani", template: "%s · Ask Sikhi" },
+  title: { default: "Ask Sikhi: Sikh news from America and the world", template: "%s · Ask Sikhi" },
   description: "News from the Sikh world and Punjab, a story map, and Vichaar on Gurbani.",
   applicationName: "Ask Sikhi",
   openGraph: {

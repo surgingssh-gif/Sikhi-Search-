@@ -95,7 +95,7 @@ export function createApp({ banidb, llm, library, news, allowedOrigins = [], aiR
   app.get("/v1/news", async (c) => {
     if (!news) return c.json({ items: [], failed: [], fetchedAt: null });
     const category = c.req.query("category");
-    const limit = Math.min(Math.max(Number(c.req.query("limit")) || 60, 1), 200);
+    const limit = Math.min(Math.max(Number(c.req.query("limit")) || 60, 1), 400);
     const { items, failed, fetchedAt } = await news.latest();
     const filtered = category ? items.filter((i) => i.categories.includes(category as never)) : items;
     c.header("cache-control", "public, max-age=300");

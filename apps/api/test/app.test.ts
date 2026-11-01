@@ -256,6 +256,10 @@ describe("News routes", () => {
     categories,
     image: null,
     place: null,
+    interest: 2,
+    tone: "neutral",
+    america: false,
+    rated: "guess",
   });
   const news = {
     latest: async () => ({ items: [item("a", ["panth"]), item("b", ["punjab"]), item("c", ["panth", "diaspora"])], failed: [], fetchedAt: "2026-10-25T00:00:00.000Z" }),

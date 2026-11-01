@@ -5,7 +5,7 @@ import { MiniMap } from "@/components/MapLoader";
 import { QuickAsk } from "@/components/QuickAsk";
 import { Story } from "@/components/Story";
 import { getHistory, getHukamnama, getNews, type NewsItem } from "@/lib/api";
-import { NEWS_SECTIONS, picker } from "@/lib/sections";
+import { inAmerica, NEWS_SECTIONS, notNegative, picker, ranked } from "@/lib/sections";
 import { englishOf, openingLines } from "@/lib/shabad";
 
 function Band({ id, section, title, items }: { id: string; section: string; title?: string; items: NewsItem[] }) {
@@ -27,31 +27,33 @@ function Band({ id, section, title, items }: { id: string; section: string; titl
 }
 
 export default async function FrontPage() {
-  const [hukamnama, news, history] = await Promise.all([getHukamnama(), getNews(200), getHistory()]);
+  const [hukamnama, news, history] = await Promise.all([getHukamnama(), getNews(250), getHistory()]);
   const items = news?.items ?? [];
-  const take = picker(items);
-  const sikh = (i: NewsItem) => i.categories.includes("panth");
+  // Best stories first: what a Sikh in America wants to read, good news, photos, freshness.
+  const take = picker(ranked(items), { perPlace: 2 });
+  const sikh = (i: NewsItem) => i.categories.includes("panth") && notNegative(i);
   const photo = (i: NewsItem) => !!i.image;
-
-  // Sikh news leads the paper. English stories take the top slots; Punjabi ones run below.
-  // If there's little Sikh news, the top falls back to any story with a photo.
-  const top = (i: NewsItem) => photo(i) && i.language === "en";
-  const lead = take(1, (i) => sikh(i) && top(i))[0] ?? take(1, top)[0] ?? take(1)[0];
+  const english = (i: NewsItem) => i.language === "en";
   // Takes `count` stories passing the first test, topping up from the next ones.
   const fill = (count: number, ...tests: ((i: NewsItem) => boolean)[]) => {
     const out: NewsItem[] = [];
     for (const test of tests) out.push(...take(count - out.length, test));
     return out;
   };
-  const rail = fill(3, (i) => sikh(i) && top(i), top);
-  const home = (i: NewsItem) => sikh(i) && !i.categories.includes("diaspora");
+
+  const top = (i: NewsItem) => sikh(i) && english(i) && i.interest >= 2;
+  const lead = take(1, (i) => top(i) && photo(i))[0] ?? take(1, top)[0] ?? take(1, sikh)[0] ?? take(1, notNegative)[0];
+  const rail = fill(3, top, sikh);
+  const abroad = (i: NewsItem) => sikh(i) && i.categories.includes("diaspora") && !inAmerica(i);
   const bands = {
-    sikhi: fill(4, (i) => home(i) && top(i), (i) => home(i) && photo(i)),
-    world: take(4, (i) => sikh(i) && photo(i) && i.categories.includes("diaspora")),
-    // Punjab stories that aren't already Sikh news.
-    punjab: take(4, (i) => i.categories.includes("punjab") && !sikh(i) && photo(i)),
+    // Local US papers and TV come through Google News without photos, so only the first card needs one.
+    america: [...take(1, (i) => sikh(i) && inAmerica(i) && photo(i)), ...take(3, (i) => sikh(i) && inAmerica(i))],
+    world: fill(4, (i) => abroad(i) && photo(i), abroad),
+    panth: fill(4, (i) => sikh(i) && english(i) && i.interest >= 2 && photo(i), (i) => sikh(i) && i.interest >= 2),
+    // Punjab stories that aren't already Sikh news, and only the ones worth a reader abroad's time.
+    punjab: take(4, (i) => i.categories.includes("punjab") && !i.categories.includes("panth") && photo(i) && (i.interest >= 2 || i.tone === "uplifting")),
   };
-  const latest = take(10, sikh);
+  const latest = take(10, sikh).sort((a, b) => (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""));
   const today = hukamnama?.shabads[0];
 
   if (!lead) {
@@ -76,7 +78,8 @@ export default async function FrontPage() {
         </div>
       </div>
 
-      <Band id="sikhi" section="sikhi" title="More Sikh news" items={bands.sikhi} />
+      <Band id="america" section="america" items={bands.america} />
+      <Band id="world" section="sikhi" title="Sikhs around the world" items={bands.world} />
 
       <section className="section-band modules" aria-label="Map, Hukamnama and Vichaar">
         <div className="module">
@@ -134,8 +137,8 @@ export default async function FrontPage() {
         </section>
       )}
 
-      <Band id="world" section="sikhi" title="Sikhs around the world" items={bands.world} />
-      <Band id="punjab" section="punjab" items={bands.punjab} />
+      <Band id="panth" section="sikhi" title="The Panth" items={bands.panth} />
+      <Band id="punjab" section="punjab" title="From Punjab" items={bands.punjab} />
 
       {latest.length > 0 && (
         <section className="section-band" aria-labelledby="band-latest">

@@ -2,7 +2,8 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
-import { cleanSnippet, DEFAULT_FEEDS, imageFrom, NewsService, parseFeed, placeFor, slugify, type NewsFeed } from "../src";
+import { cleanSnippet, DEFAULT_FEEDS, guessRating, imageFrom, NewsService, parseFeed, placeFor, slugify, type NewsFeed } from "../src";
+import { fakeLlm } from "./fakes";
 
 // Fixtures are real responses recorded from each publisher's RSS feed.
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -27,6 +28,19 @@ describe("parseFeed", () => {
     const kept = parseFeed(fixture("toi-chandigarh.xml"), feed("toi"));
     expect(kept.length).toBeLessThan(all.length);
     for (const i of kept) expect(`${i.title} ${i.snippet}`).toMatch(/punjab|sikh|gurdwara|sgpc|akal takht|amritsar|akali|khalsa|harmandir|golden temple|jathedar/i);
+  });
+
+  it("reads a Google News search: publisher as source, no snippet or photo, only stories about Sikhs", () => {
+    const items = parseFeed(fixture("google-news-us.xml"), feed("gnews-us"));
+    expect(items.length).toBeGreaterThan(40);
+    const parade = items.find((i) => i.title === "Yuba City Sikh festival celebrates 47th year this weekend")!;
+    expect(parade.source).toBe("KCRA");
+    expect(parade.snippet).toBe("");
+    expect(parade.image).toBeNull();
+    expect(parade.place?.name).toBe("Yuba City");
+    expect(parade.categories).toContain("diaspora");
+    expect(parade).toMatchObject({ interest: 3, tone: "uplifting", rated: "guess" });
+    for (const i of items) expect(i.title).not.toMatch(/ - [A-Z][\w .]+$/);
   });
 
   it("filters the Punjabi-language feed with Gurmukhi keywords", () => {
@@ -76,6 +90,69 @@ describe("NewsService", () => {
     const fetch = vi.fn(async () => new Response(rss(["Punjab assembly passes resolution on river waters"])));
     const service = new NewsService({ feeds, fetch, maxPreviewFetches: 0 });
     expect((await service.latest()).items).toHaveLength(1);
+  });
+});
+
+describe("guessRating", () => {
+  const sikh = { panthic: true, sikhOutlet: false };
+  it("rates good news about Sikhs in America highest", () => {
+    expect(guessRating("Gold domes now welcome worshippers at new Sikh temple", { ...sikh, region: "United States" })).toEqual({ interest: 3, tone: "uplifting", america: true });
+  });
+  it("marks crime and violence negative and lowers its interest", () => {
+    expect(guessRating("Firing outside gurdwara in Ludhiana's Jagraon, masked man leaves threat letter", { ...sikh, region: "Punjab" })).toEqual({
+      interest: 0,
+      tone: "negative",
+      america: false,
+    });
+  });
+  it("gives Indian politics without a Sikh angle little interest", () => {
+    expect(guessRating("Pakistan minister invites Punjab CM Mann", { panthic: false, sikhOutlet: false, region: "Punjab" }).interest).toBe(0);
+  });
+});
+
+describe("NewsService ratings", () => {
+  const rss = (titles: string[]) =>
+    `<rss><channel>${titles.map((t, i) => `<item><title>${t}</title><link>https://example.org/${i}</link><pubDate>Sat, 24 Oct 2026 1${i}:00:00 GMT</pubDate></item>`).join("")}</channel></rss>`;
+  const feeds: NewsFeed[] = [{ id: "a", name: "A", url: "https://a.test/feed", language: "en", categories: ["panth"] }];
+
+  it("shows keyword guesses at once, then the model's ratings, dropping duplicates", async () => {
+    const fetch = vi.fn(async () => new Response(rss(["Sikh parade draws thousands in Yuba City", "Yuba City hosts annual Sikh festival", "Gurdwara holds langar"])));
+    const { llm, calls } = fakeLlm({
+      "news-rating": (req) => {
+        const ids = [...String(req.messages[0]!.content).matchAll(/\[(\w+)\]/g)].map((m) => m[1]!);
+        // Oldest first: parade, festival, langar.
+        return {
+          ratings: [
+            { id: ids[0], interest: 3, tone: "uplifting", america: true, duplicateOf: null },
+            { id: ids[1], interest: 3, tone: "uplifting", america: true, duplicateOf: ids[0] },
+            { id: ids[2], interest: 2, tone: "neutral", america: true, duplicateOf: null },
+          ],
+        };
+      },
+    });
+    // The model answers only when the test says so, to see the page before it does.
+    let answer!: () => void;
+    const gate = new Promise<void>((resolve) => (answer = resolve));
+    const slowLlm: typeof llm = { completeJson: async (req) => (await gate, llm.completeJson(req)) };
+    const service = new NewsService({ feeds, fetch, llm: slowLlm, maxPreviewFetches: 0 });
+    const first = await service.latest();
+    expect(first.items).toHaveLength(3);
+    expect(first.items.every((i) => i.rated === "guess")).toBe(true);
+    answer();
+    await service.settled();
+    const after = await service.latest();
+    expect(after.items.map((i) => i.title)).toEqual(["Gurdwara holds langar", "Sikh parade draws thousands in Yuba City"]);
+    expect(after.items[1]).toMatchObject({ interest: 3, tone: "uplifting", rated: "model" });
+    expect(calls).toHaveLength(1);
+  });
+
+  it("keeps the keyword guesses when the model fails", async () => {
+    const fetch = vi.fn(async () => new Response(rss(["Gurdwara holds langar"])));
+    const { llm } = fakeLlm({ "news-rating": () => ({ nope: true }) });
+    const service = new NewsService({ feeds, fetch, llm, maxPreviewFetches: 0 });
+    await service.latest();
+    await service.settled();
+    expect((await service.latest()).items[0]!.rated).toBe("guess");
   });
 });
 

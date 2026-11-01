@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { Story } from "@/components/Story";
 import { getNews } from "@/lib/api";
-import { MOVED_SECTIONS, NEWS_SECTIONS, photoFirst } from "@/lib/sections";
+import { MOVED_SECTIONS, NEWS_SECTIONS, notNegative, photoFirst, ranked } from "@/lib/sections";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -16,11 +16,16 @@ export default async function SectionPage({ params }: Props) {
   if (MOVED_SECTIONS[id]) redirect(`/section/${MOVED_SECTIONS[id]}`);
   const section = NEWS_SECTIONS[id];
   if (!section) notFound();
-  const news = await getNews(200, section.category);
-  const items = news?.items ?? [];
-  // Lead with the newest story that has a photo; the rest stay newest first.
-  const lead = photoFirst(items)[0];
-  const rest = items.filter((i) => i !== lead);
+  const news = await getNews(250, section.category);
+  const all = (news?.items ?? []).filter(section.filter ?? (() => true));
+  // Sikh sections leave out crime and violence unless it matters a great deal to Sikhs abroad
+  // (a hate crime in America, say); the Punjab and Latest pages show everything.
+  const items = section.category === "panth" ? all.filter((i) => notNegative(i) || i.interest >= 3) : all;
+  // Lead with the best good-news story that has a photo, then the next best; the list below stays newest first.
+  const best = ranked(items.filter(notNegative));
+  const lead = photoFirst(best)[0] ?? items[0];
+  const rail = best.filter((i) => i !== lead).slice(0, 3);
+  const rest = items.filter((i) => i !== lead && !rail.includes(i));
 
   return (
     <main className="wrap wrap-wide">
@@ -35,13 +40,13 @@ export default async function SectionPage({ params }: Props) {
               <Story item={lead} variant="lead" snippet />
             </div>
             <div className="front-rail">
-              {rest.slice(0, 3).map((item) => (
+              {rail.map((item) => (
                 <Story key={item.id} item={item} variant="text" snippet />
               ))}
             </div>
           </div>
           <ul className="section-list">
-            {rest.slice(3).map((item) => (
+            {rest.map((item) => (
               <li key={item.id}>
                 <Story item={item} variant="row" snippet />
               </li>
@@ -52,8 +57,9 @@ export default async function SectionPage({ params }: Props) {
         <p className="empty">No stories here right now. Please check back soon.</p>
       )}
       <p className="discuss-tip">
-        Headlines and photos come from Sikh Siyasat, Sikh Press Association, Sikh Coalition, The Hindu, Times of India, Indian Express,
-        Hindustan Times and BBC ਪੰਜਾਬੀ, and open on the publisher&apos;s site. Inclusion isn&apos;t endorsement.
+        Headlines come from Sikh outlets (Sikh Coalition, The Sikh Foundation, Sikh Press Association, Sikh24, Sikh Siyasat), from local and
+        national news found through Google News, and from Punjab&apos;s papers and BBC ਪੰਜਾਬੀ. Stories open on the publisher&apos;s site.
+        Inclusion isn&apos;t endorsement.
       </p>
     </main>
   );

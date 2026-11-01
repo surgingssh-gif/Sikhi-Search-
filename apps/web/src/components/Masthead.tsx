@@ -8,6 +8,7 @@ import { ThemeToggle } from "./ThemeToggle";
 
 export const SECTIONS: { href: string; label: string; key?: StringKey; match: (p: string) => boolean }[] = [
   { href: "/", label: "Front Page", match: (p) => p === "/" },
+  { href: "/section/america", label: "America", match: (p) => p === "/section/america" },
   { href: "/section/sikhi", label: "Sikhi", match: (p) => p === "/section/sikhi" },
   { href: "/section/punjab", label: "Punjab", match: (p) => p === "/section/punjab" },
   { href: "/history", label: "History", key: "history", match: (p) => p.startsWith("/history") },
@@ -54,7 +55,7 @@ export function Masthead() {
           <h1 className="nameplate">
             <Link href="/">Ask Sikhi</Link>
           </h1>
-          <p className="masthead-tagline">Sikh news from around the world · Punjab · Vichaar on Gurbani</p>
+          <p className="masthead-tagline">Sikh news from America and around the world · Vichaar on Gurbani</p>
         </div>
       )}
       <nav className="section-nav" aria-label="Sections">

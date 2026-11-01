@@ -32,4 +32,5 @@ export { discuss, describeShabad, DISCUSS_SYSTEM, DiscussSchema, type DiscussRes
 export * from "./library/research";
 export * from "./news/news";
 export * from "./news/places";
+export * from "./news/rating";
 export * from "./history/events";

@@ -13,6 +13,10 @@ import {
   NotASikhTopicError,
   HISTORY_EVENTS,
   eventsAround,
+  calendarEvents,
+  JANTRI_ATTRIBUTION,
+  jantriCoversUntil,
+  nanakshahiDate,
   slugify,
   type BaniDbClient,
   type JsonLlm,
@@ -117,6 +121,21 @@ export function createApp({ banidb, llm, library, news, allowedOrigins = [], aiR
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(date))) return c.json({ error: "invalid_date" }, 400);
     const range = (v: string | undefined) => Math.min(Math.max(Number(v ?? 7) || 0, 0), 31);
     return c.json({ events: eventsAround(date, range(c.req.query("before")), range(c.req.query("after"))) });
+  });
+
+  app.get("/v1/calendar", (c) => {
+    // The Nanakshahi date of ?date= (the reader's today) and the Jantri's days from then for ?days= days.
+    const date = c.req.query("date") ?? new Date().toISOString().slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(date))) return c.json({ error: "invalid_date" }, 400);
+    const days = Math.min(Math.max(Number(c.req.query("days") ?? 60) || 0, 0), 400);
+    const to = new Date(Date.parse(`${date}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
+    c.header("cache-control", "public, max-age=3600");
+    return c.json({
+      today: nanakshahiDate(date),
+      events: calendarEvents(date, to),
+      coversUntil: jantriCoversUntil(),
+      attribution: JANTRI_ATTRIBUTION,
+    });
   });
 
   app.get("/v1/library", async (c) => {

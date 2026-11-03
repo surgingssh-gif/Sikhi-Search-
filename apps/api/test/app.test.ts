@@ -306,3 +306,21 @@ describe("GET /v1/history", () => {
     expect((await app.request("/v1/history?date=yesterday")).status).toBe(400);
   });
 });
+
+describe("GET /v1/calendar", () => {
+  const app = createApp({ banidb: banidbWith(async () => null as never) });
+
+  it("gives today's Nanakshahi date and the Jantri days ahead", async () => {
+    const res = await app.request("/v1/calendar?date=2026-11-03&days=30");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { today: { label: string }; events: { id: string; date: string }[]; coversUntil: string };
+    expect(body.today.label).toBe("18 Katak 558");
+    expect(body.events.map((e) => e.id)).toEqual(expect.arrayContaining(["bandi-chhor-divas", "parkash-guru-nanak"]));
+    expect(body.events.every((e) => e.date >= "2026-11-03" && e.date <= "2026-12-03")).toBe(true);
+    expect(body.coversUntil).toBe("2027-03-14");
+  });
+
+  it("rejects a malformed date", async () => {
+    expect((await app.request("/v1/calendar?date=soon")).status).toBe(400);
+  });
+});

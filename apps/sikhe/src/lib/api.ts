@@ -1,9 +1,9 @@
-import type { DatedHistoryEvent, Hukamnama, NewsItem } from "@ask-sikhi/core";
+import type { CalendarEvent, DatedHistoryEvent, Hukamnama, NanakshahiDate, NewsItem } from "@ask-sikhi/core";
 import { useQuery } from "@tanstack/react-query";
 import Constants from "expo-constants";
 import { Platform } from "react-native";
 
-export type { DatedHistoryEvent, HistoryEvent, Hukamnama, NewsItem, Shabad, Verse } from "@ask-sikhi/core";
+export type { CalendarEvent, NanakshahiDate, DatedHistoryEvent, HistoryEvent, Hukamnama, NewsItem, Shabad, Verse } from "@ask-sikhi/core";
 
 /**
  * Where the API lives. EXPO_PUBLIC_API_URL wins; otherwise, in development, the
@@ -83,6 +83,27 @@ export function useHistoryAround(date: string, before = 0, after = 6) {
   return useQuery({
     queryKey: ["history", date, before, after],
     queryFn: () => getJson<{ events: DatedHistoryEvent[] }>(`/v1/history?date=${date}&before=${before}&after=${after}`),
+    staleTime: 60 * 60_000,
+  });
+}
+
+export interface CalendarResponse {
+  /** Null outside the years the SGPC has printed a Jantri for. */
+  today: NanakshahiDate | null;
+  events: CalendarEvent[];
+  coversUntil: string;
+  attribution: string;
+}
+
+export function calendarPath(date: string, days: number) {
+  return `/v1/calendar?date=${date}&days=${days}`;
+}
+
+/** The Sikh calendar from `date` for `days` days. */
+export function useCalendar(date: string, days = 60) {
+  return useQuery({
+    queryKey: ["calendar", date, days],
+    queryFn: () => getJson<CalendarResponse>(calendarPath(date, days)),
     staleTime: 60 * 60_000,
   });
 }

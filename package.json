@@ -7,17 +7,22 @@
     "apps/*"
   ],
   "scripts": {
-    "dev": "concurrently --kill-others-on-fail --names api,web --prefix-colors yellow,cyan \"npm:dev:api\" \"npm:dev:web\"",
+    "dev": "concurrently --kill-others-on-fail --names api,app --prefix-colors yellow,cyan \"npm:dev:api\" \"npm:dev:app\"",
     "dev:api": "npm run dev -w @ask-sikhi/api",
     "test": "npm test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present && tsc --noEmit -p evals",
     "eval": "tsx --env-file-if-exists=.env evals/run.ts",
-    "dev:web": "npm run dev -w @ask-sikhi/web"
+    "dev:web": "npm run dev -w @ask-sikhi/web",
+    "dev:app": "npm run web -w @ask-sikhi/sikhe"
   },
   "engines": {
     "node": ">=22"
   },
   "devDependencies": {
     "concurrently": "^10.0.6"
+  },
+  "overrides": {
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
   }
 }

@@ -75,6 +75,7 @@ function Root() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="calendar" />
         <Stack.Screen name="settings" />
+        <Stack.Screen name="map" />
       </Stack>
     </>
   );

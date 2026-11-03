@@ -107,3 +107,17 @@ export function useCalendar(date: string, days = 60) {
     staleTime: 60 * 60_000,
   });
 }
+
+export interface Briefing {
+  generatedAt: string;
+  bullets: { text: string; itemIds: string[] }[];
+}
+
+/** The day's news in a few lines, written by the model each morning. Null when AI isn't set up. */
+export function useBriefing() {
+  return useQuery({
+    queryKey: ["briefing"],
+    queryFn: () => getJson<Briefing>("/v1/news/briefing").catch((err) => (err instanceof ApiError && err.code === "ai_not_configured" ? null : Promise.reject(err))),
+    staleTime: 30 * 60_000,
+  });
+}

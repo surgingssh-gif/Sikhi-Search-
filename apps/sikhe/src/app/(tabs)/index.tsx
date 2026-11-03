@@ -12,7 +12,7 @@ import { Card, Divider, ErrorState, Loading, Section } from "@/components/ui";
 import { Wordmark } from "@/components/Wordmark";
 import { friendlyError, localDate, useCalendar, useHistoryAround, useNews } from "@/lib/api";
 import { whenLabel } from "@/lib/calendar";
-import { isSikhNews, ranked } from "@/lib/stories";
+import { NEWS_SECTIONS } from "@/lib/stories";
 import { useTheme } from "@/theme/theme";
 import { FONT, SPACE } from "@/theme/tokens";
 
@@ -52,7 +52,7 @@ function TopStories() {
   const { data, error, isPending, refetch } = useNews();
   if (isPending) return <Loading />;
   if (error) return <ErrorState message={friendlyError(error)} onRetry={() => refetch()} />;
-  const stories = ranked(data.items.filter((i) => isSikhNews(i) && i.language === "en" && i.interest >= 2));
+  const stories = NEWS_SECTIONS[0]!.stories(data.items).filter((i) => i.language === "en");
   const lead = stories.find((i) => i.image) ?? stories[0];
   const rest = stories.filter((i) => i !== lead).slice(0, 4);
   if (!lead) return <Text variant="small">No stories right now.</Text>;

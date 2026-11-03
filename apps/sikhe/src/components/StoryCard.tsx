@@ -1,7 +1,7 @@
 import { Image } from "expo-image";
-import { Linking, Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import type { NewsItem } from "@/lib/api";
-import { timeAgo } from "@/lib/stories";
+import { openStory, timeAgo } from "@/lib/stories";
 import { useTheme } from "@/theme/theme";
 import { RADIUS, SPACE } from "@/theme/tokens";
 import { Text } from "./Text";
@@ -20,7 +20,7 @@ function Byline({ item }: { item: NewsItem }) {
  */
 export function StoryCard({ item, variant = "row" }: { item: NewsItem; variant?: "lead" | "row" }) {
   const { colors } = useTheme();
-  const open = () => Linking.openURL(item.url).catch(() => {});
+  const open = () => openStory(item);
 
   if (variant === "lead") {
     return (

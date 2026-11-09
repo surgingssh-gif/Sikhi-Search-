@@ -1,10 +1,11 @@
 import { Image } from "expo-image";
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { Pressable, View } from "react-native";
 import { Screen } from "@/components/Screen";
 import { Text } from "@/components/Text";
 import { Button, ErrorState, Loading } from "@/components/ui";
 import { friendlyError } from "@/lib/api";
+import { useChats } from "@/lib/ask";
 import { useArticle } from "@/lib/history";
 import { openStory } from "@/lib/stories";
 import { useTheme } from "@/theme/theme";
@@ -16,6 +17,11 @@ export default function ArticleScreen() {
   const title = String(useLocalSearchParams<{ title: string }>().title ?? "");
   const { data, error, isPending, refetch } = useArticle(title);
   const article = data?.article;
+  const { start } = useChats();
+  const askAbout = (name: string) => {
+    const id = start();
+    router.push({ pathname: "/chat/[id]", params: { id, draft: `What should I know about ${name} in Sikh history?` } });
+  };
 
   return (
     <Screen back title={article?.title ?? title} kicker={article?.description || undefined}>
@@ -48,6 +54,7 @@ export default function ArticleScreen() {
             </View>
           ))}
           <View style={{ gap: SPACE.md, paddingTop: SPACE.md, borderTopWidth: 0.5, borderColor: colors.line }}>
+            <Button label="Ask Sikhe about this" icon="chatbubble-ellipses-outline" onPress={() => askAbout(article.title)} />
             <Button label="Read on Wikipedia" icon="open-outline" kind="quiet" onPress={() => openStory({ url: article.url })} />
             <Pressable onPress={() => openStory({ url: "https://creativecommons.org/licenses/by-sa/4.0/" })} accessibilityRole="link">
               <Text variant="meta" color="inkFaint">

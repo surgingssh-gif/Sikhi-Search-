@@ -4,7 +4,9 @@ import { View, type ScrollViewInstance } from "react-native";
 import { PrevNext, ReaderOptions, SaveButton, ShabadMeta, VerseView } from "@/components/Gurbani";
 import { Screen } from "@/components/Screen";
 import { Text } from "@/components/Text";
-import { ErrorState, Loading } from "@/components/ui";
+import { Button, ErrorState, Loading } from "@/components/ui";
+import { useChats } from "@/lib/ask";
+import { englishOf, openingLines } from "@/lib/shabad";
 import { friendlyError } from "@/lib/api";
 import { useShabad } from "@/lib/gurbani";
 import { SPACE } from "@/theme/tokens";
@@ -16,6 +18,12 @@ export default function ShabadScreen() {
   const verseId = Number(params.verse);
   const { data, error, isPending, refetch } = useShabad(id);
   const shabad = data?.shabad;
+  const { start } = useChats();
+  const askAbout = () => {
+    if (!shabad) return;
+    const id = start({ shabadId: shabad.shabadId, subject: englishOf(openingLines(shabad.verses, 1)[0] ?? shabad.verses[0]!) });
+    router.push({ pathname: "/chat/[id]", params: { id } });
+  };
   // Scrolls once to the line a search found, when it has been laid out.
   const scroll = useRef<ScrollViewInstance>(null);
   const listY = useRef(0);
@@ -47,6 +55,9 @@ export default function ShabadScreen() {
                 <VerseView verse={v} highlight={v.verseId === verseId} />
               </View>
             ))}
+          </View>
+          <View style={{ alignItems: "flex-start" }}>
+            <Button label="Ask about this shabad" icon="chatbubble-ellipses-outline" onPress={askAbout} />
           </View>
           <Link href={`/ang/${shabad.ang}`}>
             <Text variant="button" color="accentInk">

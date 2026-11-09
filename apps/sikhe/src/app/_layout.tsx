@@ -9,6 +9,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import * as SystemUI from "expo-system-ui";
 import { useEffect, useState } from "react";
+import { ChatsProvider } from "@/lib/ask";
 import { LibraryProvider } from "@/lib/library";
 import { loadPrefs, remindersSupported, scheduleReminders } from "@/lib/reminders";
 import { ThemeProvider, useTheme } from "@/theme/theme";
@@ -58,7 +59,9 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <LibraryProvider>
-          <Root />
+          <ChatsProvider>
+            <Root />
+          </ChatsProvider>
         </LibraryProvider>
       </ThemeProvider>
     </QueryClientProvider>
@@ -84,6 +87,7 @@ function Root() {
         <Stack.Screen name="bani/[id]" />
         <Stack.Screen name="article" />
         <Stack.Screen name="timeline" />
+        <Stack.Screen name="chat/[id]" />
       </Stack>
     </>
   );

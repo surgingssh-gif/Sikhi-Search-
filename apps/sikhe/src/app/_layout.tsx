@@ -9,6 +9,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import * as SystemUI from "expo-system-ui";
 import { useEffect, useState } from "react";
+import { LibraryProvider } from "@/lib/library";
 import { loadPrefs, remindersSupported, scheduleReminders } from "@/lib/reminders";
 import { ThemeProvider, useTheme } from "@/theme/theme";
 
@@ -56,7 +57,9 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-        <Root />
+        <LibraryProvider>
+          <Root />
+        </LibraryProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );
@@ -76,6 +79,9 @@ function Root() {
         <Stack.Screen name="calendar" />
         <Stack.Screen name="settings" />
         <Stack.Screen name="map" />
+        <Stack.Screen name="shabad/[id]" />
+        <Stack.Screen name="ang/[ang]" />
+        <Stack.Screen name="bani/[id]" />
       </Stack>
     </>
   );

@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import type { ReactNode } from "react";
-import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import type { ReactNode, Ref } from "react";
+import { Pressable, RefreshControl, ScrollView, StyleSheet, View, type ScrollViewInstance } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/theme/theme";
 import { READING_WIDTH, SPACE } from "@/theme/tokens";
@@ -20,6 +20,7 @@ export function Screen({
   refreshing = false,
   onRefresh,
   back,
+  scrollRef,
 }: {
   title?: string;
   /** A small line above the title, such as today's date. */
@@ -30,11 +31,13 @@ export function Screen({
   refreshing?: boolean;
   onRefresh?: () => void;
   back?: boolean;
+  scrollRef?: Ref<ScrollViewInstance>;
 }) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   return (
     <ScrollView
+      ref={scrollRef}
       style={{ backgroundColor: colors.bg }}
       contentContainerStyle={[styles.content, { paddingTop: insets.top + SPACE.lg }]}
       refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} /> : undefined}

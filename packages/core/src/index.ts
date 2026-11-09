@@ -1,5 +1,5 @@
 export * from "./types";
-export { BaniDbClient, type BaniDbClientOptions, type SearchOptions } from "./banidb/client";
+export { BaniDbClient, type BaniDbClientOptions, type GurbaniSearchMode, type SearchOptions } from "./banidb/client";
 export { BaniDbError, BaniDbNotFoundError, BaniDbDataError } from "./banidb/errors";
 export type { RawShabadResponse, RawSearchResponse, RawVerse } from "./banidb/raw-types";
 export {

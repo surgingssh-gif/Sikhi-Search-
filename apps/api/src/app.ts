@@ -28,7 +28,7 @@ import type { NewsService } from "./news";
 import { rateLimit } from "./rate-limit";
 
 export interface AppDeps {
-  banidb: Pick<BaniDbClient, "getShabad" | "searchTranslations" | "getHukamnamaToday" | "getAng" | "getBanis" | "getBani">;
+  banidb: Pick<BaniDbClient, "getShabad" | "searchTranslations" | "searchGurbani" | "getHukamnamaToday" | "getAng" | "getBanis" | "getBani">;
   /** Absent when no model credentials are configured; AI endpoints then return 503. */
   llm?: JsonLlm;
   /** Library storage and research. Research is absent without model credentials. */
@@ -94,6 +94,20 @@ export function createApp({ banidb, llm, library, news, allowedOrigins = [], aiR
     if (!Number.isInteger(id) || id < 1) return c.json({ error: "invalid_bani_id" }, 400);
     c.header("cache-control", "public, max-age=86400");
     return c.json({ bani: await banidb.getBani(id), attribution: GURBANI_ATTRIBUTION });
+  });
+
+  // Searches go straight through to BaniDB, so readers get a generous limit but not an unlimited one.
+  const searchLimit = rateLimit({ limit: 60, windowMs: 60_000 });
+
+  app.get("/v1/search", searchLimit, async (c) => {
+    const q = (c.req.query("q") ?? "").trim();
+    const mode = c.req.query("mode") ?? "first-letters";
+    if (!q || q.length > 100) return c.json({ error: "invalid_request" }, 400);
+    if (mode !== "first-letters" && mode !== "words" && mode !== "meaning") return c.json({ error: "invalid_mode" }, 400);
+    const page = Math.min(Math.max(Number(c.req.query("page")) || 1, 1), 50);
+    const result = await banidb.searchGurbani(q, mode, { page, results: 20 });
+    c.header("cache-control", "public, max-age=3600");
+    return c.json({ ...result, attribution: GURBANI_ATTRIBUTION });
   });
 
   app.get("/v1/news", async (c) => {

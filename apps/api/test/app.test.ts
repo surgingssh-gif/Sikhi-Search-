@@ -18,6 +18,7 @@ const emptySearch = async (query: string) => ({ query, totalResults: 0, page: 0,
 const banidbWith = (getShabad: (id: number) => Promise<typeof shabad>) => ({
   getShabad,
   searchTranslations: emptySearch,
+  searchGurbani: emptySearch,
   getHukamnamaToday: async () => ({ date: "2026-10-24", shabads: [shabad] }),
   getAng: async (ang: number) => ({ ang, shabads: [] }),
   getBanis: async () => [{ baniId: 2, name: "japujee saahib", gurmukhi: "ਜਪੁਜੀ ਸਾਹਿਬ" }],
@@ -322,5 +323,21 @@ describe("GET /v1/calendar", () => {
 
   it("rejects a malformed date", async () => {
     expect((await app.request("/v1/calendar?date=soon")).status).toBe(400);
+  });
+});
+
+describe("GET /v1/search", () => {
+  it("passes the query and mode to BaniDB", async () => {
+    const searchGurbani = vi.fn(emptySearch);
+    const app = createApp({ banidb: { ...banidbWith(async () => shabad), searchGurbani } });
+    const res = await app.request("/v1/search?q=skmk&mode=first-letters&page=2");
+    expect(res.status).toBe(200);
+    expect(searchGurbani).toHaveBeenCalledWith("skmk", "first-letters", { page: 2, results: 20 });
+  });
+
+  it("rejects an empty query or an unknown mode", async () => {
+    const app = createApp({ banidb: banidbWith(async () => shabad) });
+    expect((await app.request("/v1/search?q=")).status).toBe(400);
+    expect((await app.request("/v1/search?q=waheguru&mode=fuzzy")).status).toBe(400);
   });
 });

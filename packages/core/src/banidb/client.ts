@@ -26,8 +26,17 @@ export interface SearchOptions {
   results?: number;
 }
 
+/**
+ * How a reader searches Gurbani. "first-letters" takes the first letter of each
+ * word anywhere in a line, in Gurmukhi or typed on the Gurbani Akhar keyboard
+ * ("skmk" for ਸਭ ਕੀਮਤਿ ਮਿਲਿ ਕੀਮਤਿ); "words" takes whole Gurmukhi words;
+ * "meaning" takes whole English words in the translation.
+ */
+export type GurbaniSearchMode = "first-letters" | "words" | "meaning";
+
 /** BaniDB `searchtype` values we use (see /v2/api-docs). */
 const SEARCH_TYPE_ENGLISH_TRANSLATION = 3;
+const SEARCH_TYPES: Record<GurbaniSearchMode, number> = { "first-letters": 1, words: 2, meaning: SEARCH_TYPE_ENGLISH_TRANSLATION };
 const HUKAMNAMA_TTL_MS = 15 * 60 * 1000;
 
 interface CacheEntry {
@@ -61,10 +70,15 @@ export class BaniDbClient {
 
   /** Whole-word search over English translations (BaniDB searchtype 3). */
   async searchTranslations(query: string, options: SearchOptions = {}): Promise<SearchResult> {
+    return this.searchGurbani(query, "meaning", options);
+  }
+
+  /** A reader's search: by first letters, Gurmukhi words or English meaning. */
+  async searchGurbani(query: string, mode: GurbaniSearchMode, options: SearchOptions = {}): Promise<SearchResult> {
     const q = query.trim();
     if (!q) return { query: q, totalResults: 0, page: 0, totalPages: 0, hits: [] };
     const params = new URLSearchParams({
-      searchtype: String(SEARCH_TYPE_ENGLISH_TRANSLATION),
+      searchtype: String(SEARCH_TYPES[mode]),
       source: options.source ?? "G",
       results: String(options.results ?? 20),
       page: String(options.page ?? 1),

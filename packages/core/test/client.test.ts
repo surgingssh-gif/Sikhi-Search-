@@ -59,6 +59,16 @@ describe("BaniDbClient", () => {
     expect(url.searchParams.get("source")).toBe("G");
   });
 
+  it("searches by first letters, typed on the Gurbani Akhar keyboard", async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>(async () => jsonResponse({ resultsInfo: { totalResults: 0, pages: { page: 1, totalPages: 0 } }, verses: [] }));
+    const client = new BaniDbClient({ fetch, baseUrl: "https://example.test/v2" });
+    await client.searchGurbani("skmk", "first-letters", { page: 2 });
+    const url = new URL(String(fetch.mock.calls[0]![0]));
+    expect(url.pathname).toBe("/v2/search/skmk");
+    expect(url.searchParams.get("searchtype")).toBe("1");
+    expect(url.searchParams.get("page")).toBe("2");
+  });
+
   it("evicts the oldest entries past the cache limit", async () => {
     const fetch = vi.fn<typeof globalThis.fetch>(async () => jsonResponse(shabadFixture));
     const client = new BaniDbClient({ fetch, maxCacheEntries: 1 });

@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Link, router, type Href } from "expo-router";
-import { useState } from "react";
+import { Link, router, useLocalSearchParams, type Href } from "expo-router";
+import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, TextInput, View } from "react-native";
 import { Screen } from "@/components/Screen";
 import { SearchBox, useDebounced } from "@/components/SearchBox";
@@ -93,6 +93,11 @@ export default function GurbaniScreen() {
   const { colors } = useTheme();
   const [query, setQuery] = useState("");
   const [chosenMode, setChosenMode] = useState<GurbaniSearchMode | null>(null);
+  // A search sent from the masthead's "Find a shabad" box.
+  const { q } = useLocalSearchParams<{ q?: string }>();
+  useEffect(() => {
+    if (q) setQuery(q);
+  }, [q]);
   const settled = useDebounced(query);
   const mode = chosenMode ?? guessMode(query);
   const searching = query.trim().length >= 1;
@@ -106,7 +111,7 @@ export default function GurbaniScreen() {
   const today = hukam?.shabads[0];
 
   return (
-    <Screen title="Gurbani">
+    <Screen masthead width={860} title="Gurbani" kicker="Sri Guru Granth Sahib Ji, the Nitnem banis and today's Hukamnama">
       <View style={{ gap: SPACE.sm }}>
         <SearchBox value={query} onChange={setQuery} placeholder="Search Gurbani, or type an Ang number" label="Search Gurbani" />
         {searching && (

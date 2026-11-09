@@ -30,7 +30,7 @@ export default function CalendarScreen() {
   }
 
   return (
-    <Screen back title="Sikh calendar" kicker={data?.today ? `${data.today.label} Nanakshahi` : undefined}>
+    <Screen masthead width={860} title="Sikh calendar" kicker={data?.today ? `${data.today.label} Nanakshahi` : undefined}>
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: SPACE.sm }}>
         {FILTERS.map((f) => (
           <Chip key={f.id} label={f.label} active={f.id === filter} onPress={() => setFilter(f.id)} />

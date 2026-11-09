@@ -1,8 +1,6 @@
-import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Link } from "expo-router";
-import { Pressable, StyleSheet, View } from "react-native";
+import { StyleSheet, useWindowDimensions, View } from "react-native";
 import { CalendarEventRow } from "@/components/CalendarEventRow";
 import { EventRow } from "@/components/History";
 import { HukamnamaCard } from "@/components/HukamnamaCard";
@@ -10,24 +8,12 @@ import { Screen } from "@/components/Screen";
 import { StoryCard } from "@/components/StoryCard";
 import { Text } from "@/components/Text";
 import { Card, Divider, ErrorState, Loading, Section } from "@/components/ui";
-import { Wordmark } from "@/components/Wordmark";
 import { friendlyError, localDate, useCalendar, useHistoryAround, useNews } from "@/lib/api";
 import { whenLabel } from "@/lib/calendar";
 import { anniversaryLabel } from "@/lib/history";
 import { NEWS_SECTIONS } from "@/lib/stories";
 import { useTheme } from "@/theme/theme";
-import { FONT, SPACE } from "@/theme/tokens";
-
-function SettingsButton() {
-  const { colors } = useTheme();
-  return (
-    <Link href="/settings" asChild>
-      <Pressable accessibilityRole="button" accessibilityLabel="Settings" hitSlop={10} style={{ padding: 6, borderRadius: 999, borderWidth: 1, borderColor: colors.line }}>
-        <Ionicons name="settings-outline" size={16} color={colors.inkSoft} />
-      </Pressable>
-    </Link>
-  );
-}
+import { SPACE, WIDE } from "@/theme/tokens";
 
 /** Today's observances in the Sikh calendar, then the next few days ahead. */
 function SikhCalendar({ today }: { today: string }) {
@@ -88,57 +74,13 @@ function OnThisDay({ today }: { today: string }) {
   );
 }
 
-/**
- * The front page's nameplate: a small top line, "Sikhe" in blackletter, then a
- * dateline between a rule and a double rule, with the Gregorian and Nanakshahi
- * dates side by side.
- */
-function Masthead({ now, today }: { now: Date; today: string }) {
-  const { colors } = useTheme();
-  const { data } = useCalendar(today, 45);
-  const ns = data?.today;
-  return (
-    <View>
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-        <Text variant="meta" color="inkFaint" style={{ fontFamily: FONT.sansMedium }}>
-          Sikh news, Gurbani and history
-        </Text>
-        <SettingsButton />
-      </View>
-      <View style={{ marginTop: SPACE.sm, marginBottom: SPACE.md }}>
-        <Wordmark size={40} />
-      </View>
-      <View style={[styles.dateline, { borderTopColor: colors.rule }]}>
-        <Text variant="meta" color="ink" style={[styles.dateText, { flexGrow: 0, flexShrink: 0, flexBasis: "auto" }]} numberOfLines={1}>
-          {now.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric", year: "numeric" })}
-        </Text>
-        {ns && (
-          <>
-            <Text variant="meta" color="ink" style={[styles.dateText, { fontFamily: FONT.gurmukhiBold, textAlign: "center" }]} numberOfLines={1}>
-              {ns.labelPa}
-            </Text>
-            <Text variant="meta" color="inkSoft" style={[styles.dateText, { fontFamily: FONT.displayItalic, fontSize: 12, textAlign: "right" }]} numberOfLines={1}>
-              {ns.label} NS
-            </Text>
-          </>
-        )}
-      </View>
-      {/* The double rule under the dateline. */}
-      <View style={{ height: 4, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.rule }} />
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  dateline: { flexDirection: "row", alignItems: "center", gap: SPACE.sm, borderTopWidth: 1, paddingVertical: 6 },
-  dateText: { flex: 1, fontFamily: FONT.sansBold, fontSize: 11, letterSpacing: 0.2 },
-});
-
 export default function TodayScreen() {
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
   const now = new Date();
   const today = localDate(now);
+  const { colors } = useTheme();
+  const wide = useWindowDimensions().width >= WIDE;
 
   const refresh = async () => {
     setRefreshing(true);
@@ -147,14 +89,26 @@ export default function TodayScreen() {
   };
 
   return (
-    <Screen refreshing={refreshing} onRefresh={refresh}>
-      <Masthead now={now} today={today} />
-      <HukamnamaCard />
-      <SikhCalendar today={today} />
-      <Section title="Top stories" href="/news" more="All news">
-        <TopStories />
-      </Section>
-      <OnThisDay today={today} />
+    <Screen masthead refreshing={refreshing} onRefresh={refresh}>
+      {/* The front page: the lead column, and beside it on wide screens a rail of dates. */}
+      <View style={wide ? styles.front : { gap: SPACE.xl }}>
+        <View style={wide ? styles.lead : { gap: SPACE.xl }}>
+          <HukamnamaCard />
+          <Section title="Top stories" href="/news" more="All news">
+            <TopStories />
+          </Section>
+        </View>
+        <View style={wide ? [styles.rail, { borderLeftColor: colors.line }] : { gap: SPACE.xl }}>
+          <SikhCalendar today={today} />
+          <OnThisDay today={today} />
+        </View>
+      </View>
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  front: { flexDirection: "row", alignItems: "flex-start" },
+  lead: { flex: 1, gap: SPACE.xl, paddingRight: 40 },
+  rail: { width: 360, gap: SPACE.xl, paddingLeft: 36, borderLeftWidth: 1 },
+});

@@ -44,7 +44,7 @@ export default function AskScreen() {
   };
 
   return (
-    <Screen title="Ask">
+    <Screen masthead width={860} title="Ask" kicker="Questions on Gurbani, history and Sikh life">
       <View style={{ gap: SPACE.md }}>
         <Text variant="body" color="inkSoft">
           Ask about Gurbani, Sikh history or living as a Sikh. Every quote of Gurbani comes from BaniDB, and every citation is checked before you see it.

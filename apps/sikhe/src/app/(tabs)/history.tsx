@@ -98,7 +98,7 @@ export default function HistoryScreen() {
   const searching = query.trim().length > 0;
 
   return (
-    <Screen title="History">
+    <Screen masthead title="History" kicker="Look up a Guru, a battle, a place or a person">
       <View style={{ gap: SPACE.sm }}>
         <SearchBox value={query} onChange={setQuery} placeholder="Search Sikh history: a Guru, a battle, a place" label="Search Sikh history" />
         {!searching && (

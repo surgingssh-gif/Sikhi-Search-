@@ -56,7 +56,7 @@ export default function NewsScreen() {
   };
 
   return (
-    <Screen title="News" right={<MapButton />} refreshing={refreshing} onRefresh={refresh}>
+    <Screen masthead title="News" kicker="Sikh and Punjab news, ranked for Sikhs in America" right={<MapButton />} refreshing={refreshing} onRefresh={refresh}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -SPACE.xl + 4 }} contentContainerStyle={{ gap: SPACE.sm, paddingHorizontal: SPACE.xl - 4 }}>
         {NEWS_SECTIONS.map((s) => (
           <Chip

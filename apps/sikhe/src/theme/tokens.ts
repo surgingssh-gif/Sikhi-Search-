@@ -87,5 +87,9 @@ export const RADIUS = { sm: 4, md: 6, lg: 6, pill: 999 } as const;
 
 /** The widest a column of reading gets on a big screen. */
 export const READING_WIDTH = 720;
-/** From this window width the app shows its tabs as a sidebar. */
-export const WIDE = 900;
+/** The widest the page gets, masthead included. */
+export const PAGE_WIDTH = 1160;
+/** From this width pages set a side column beside the main one. */
+export const WIDE = 980;
+/** Below this width the masthead stacks and its sections scroll sideways. */
+export const NARROW = 680;

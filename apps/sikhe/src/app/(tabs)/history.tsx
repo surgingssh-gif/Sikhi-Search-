@@ -79,7 +79,7 @@ function TimelineLink() {
   const { colors } = useTheme();
   return (
     <Link href="/timeline" asChild>
-      <Pressable accessibilityRole="link" style={{ flexDirection: "row", alignItems: "center", gap: SPACE.md, padding: SPACE.lg, borderRadius: 18, backgroundColor: colors.surface, borderWidth: 0.5, borderColor: colors.line }}>
+      <Pressable accessibilityRole="link" style={{ flexDirection: "row", alignItems: "center", gap: SPACE.md, padding: SPACE.lg, borderRadius: 4, borderWidth: 1, borderColor: colors.line }}>
         <Ionicons name="git-commit-outline" size={24} color={colors.accentInk} />
         <View style={{ flex: 1 }}>
           <Text variant="title">The timeline</Text>

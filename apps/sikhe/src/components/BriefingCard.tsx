@@ -37,8 +37,8 @@ export function BriefingCard({ items }: { items: NewsItem[] }) {
                 accessibilityRole={story ? "link" : undefined}
                 style={({ pressed }) => ({ flexDirection: "row", gap: SPACE.md, opacity: pressed ? 0.7 : 1 })}
               >
-                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.accent, marginTop: 9 }} />
-                <Text variant="body" style={{ flex: 1 }}>
+                <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: colors.ink, marginTop: 9 }} />
+                <Text variant="small" color="ink" style={{ flex: 1 }}>
                   {b.text}
                   {story && <Text variant="meta" color="accentInk">{`  ${story.source} ›`}</Text>}
                 </Text>

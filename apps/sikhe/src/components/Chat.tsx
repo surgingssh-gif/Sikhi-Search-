@@ -70,7 +70,7 @@ function Inline({ text, label, onCite }: { text: string; label: (verseId: number
   for (const m of text.matchAll(pattern)) {
     if (m.index > last) out.push(text.slice(last, m.index));
     const key = `${m.index}`;
-    if (m[1] ?? m[2]) out.push(<Text key={key} style={{ fontFamily: FONT.sansBold }}>{m[1] ?? m[2]}</Text>);
+    if (m[1] ?? m[2]) out.push(<Text key={key} style={{ fontFamily: FONT.serifBold }}>{m[1] ?? m[2]}</Text>);
     else if (m[3] ?? m[4]) out.push(<Text key={key} style={{ fontStyle: "italic" }}>{m[3] ?? m[4]}</Text>);
     else {
       const verseId = Number(m[5]);

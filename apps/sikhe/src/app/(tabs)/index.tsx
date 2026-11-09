@@ -22,7 +22,7 @@ function SettingsButton() {
   const { colors } = useTheme();
   return (
     <Link href="/settings" asChild>
-      <Pressable accessibilityRole="button" accessibilityLabel="Settings" hitSlop={10} style={{ padding: SPACE.sm, borderRadius: 999, backgroundColor: colors.sunken }}>
+      <Pressable accessibilityRole="button" accessibilityLabel="Settings" hitSlop={10} style={{ padding: SPACE.xs }}>
         <Ionicons name="settings-outline" size={20} color={colors.ink} />
       </Pressable>
     </Link>
@@ -92,9 +92,27 @@ function NanakshahiLine({ today }: { today: string }) {
   const { data } = useCalendar(today, 45);
   if (!data?.today) return null;
   return (
-    <Text variant="meta">
-      {data.today.label} Nanakshahi · <Text variant="meta" style={{ fontFamily: FONT.gurmukhi }}>{data.today.labelPa}</Text>
+    <Text variant="small" style={{ fontFamily: FONT.displayItalic, textAlign: "center" }}>
+      {data.today.label} Nanakshahi · <Text variant="small" style={{ fontFamily: FONT.gurmukhi, fontStyle: "normal" }}>{data.today.labelPa}</Text>
     </Text>
+  );
+}
+
+/** The front page's nameplate: the date and settings above, the Nanakshahi date below, then a double rule. */
+function Masthead({ now, today }: { now: Date; today: string }) {
+  const { colors } = useTheme();
+  return (
+    <View style={{ gap: SPACE.sm }}>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+        <Text variant="meta" color="ink" style={{ fontFamily: FONT.sansBold }}>
+          {now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+        </Text>
+        <SettingsButton />
+      </View>
+      <Wordmark size={52} />
+      <NanakshahiLine today={today} />
+      <View style={{ height: 4, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.rule, marginTop: SPACE.xs }} />
+    </View>
   );
 }
 
@@ -112,15 +130,7 @@ export default function TodayScreen() {
 
   return (
     <Screen refreshing={refreshing} onRefresh={refresh}>
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-        <Wordmark />
-        <SettingsButton />
-      </View>
-      <View style={{ gap: 2, marginTop: -SPACE.sm }}>
-        <Text variant="label">{now.toLocaleDateString("en-US", { weekday: "long" })}</Text>
-        <Text variant="display">{now.toLocaleDateString("en-US", { month: "long", day: "numeric" })}</Text>
-        <NanakshahiLine today={today} />
-      </View>
+      <Masthead now={now} today={today} />
       <HukamnamaCard />
       <SikhCalendar today={today} />
       <Section title="Top stories" href="/news" more="All news">

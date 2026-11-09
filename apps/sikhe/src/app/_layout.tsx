@@ -1,6 +1,7 @@
-import { Fraunces_400Regular_Italic, Fraunces_600SemiBold } from "@expo-google-fonts/fraunces";
-import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from "@expo-google-fonts/inter";
+import { LibreFranklin_400Regular, LibreFranklin_500Medium, LibreFranklin_700Bold } from "@expo-google-fonts/libre-franklin";
 import { NotoSerifGurmukhi_400Regular, NotoSerifGurmukhi_600SemiBold } from "@expo-google-fonts/noto-serif-gurmukhi";
+import { SourceSerif4_400Regular, SourceSerif4_400Regular_Italic, SourceSerif4_700Bold } from "@expo-google-fonts/source-serif-4";
+import { UnifrakturMaguntia_400Regular } from "@expo-google-fonts/unifrakturmaguntia";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
 import * as Notifications from "expo-notifications";
@@ -39,11 +40,13 @@ function useReminders() {
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
-    Fraunces_600SemiBold,
-    Fraunces_400Regular_Italic,
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
+    SourceSerif4_400Regular,
+    SourceSerif4_400Regular_Italic,
+    SourceSerif4_700Bold,
+    LibreFranklin_400Regular,
+    LibreFranklin_500Medium,
+    LibreFranklin_700Bold,
+    UnifrakturMaguntia_400Regular,
     NotoSerifGurmukhi_400Regular,
     NotoSerifGurmukhi_600SemiBold,
   });

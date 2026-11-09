@@ -8,17 +8,14 @@ import { Text } from "./Text";
 
 export type IconName = ComponentProps<typeof Ionicons>["name"];
 
-/** A raised panel on the page. `featured` gives it a wash of kesri. */
+/**
+ * A block of the page. Like a newspaper column it has no box: rows inside are
+ * split by thin rules. `featured` sets it in a shaded box under a heavy rule.
+ */
 export function Card({ children, featured, style }: { children: ReactNode; featured?: boolean; style?: ViewStyle }) {
   const { colors } = useTheme();
   return (
-    <View
-      style={[
-        styles.card,
-        { backgroundColor: featured ? colors.accentWash : colors.surface, borderColor: featured ? "transparent" : colors.line },
-        style,
-      ]}
-    >
+    <View style={[styles.card, featured && [styles.featured, { backgroundColor: colors.sunken, borderTopColor: colors.rule }], style]}>
       {children}
     </View>
   );
@@ -26,8 +23,9 @@ export function Card({ children, featured, style }: { children: ReactNode; featu
 
 /** A section's label, with an optional link to see more. */
 export function SectionHeader({ title, href, more = "See all" }: { title: string; href?: Href; more?: string }) {
+  const { colors } = useTheme();
   return (
-    <View style={styles.sectionHeader}>
+    <View style={[styles.sectionHeader, { borderTopColor: colors.rule }]}>
       <Text variant="label" accessibilityRole="header">
         {title}
       </Text>
@@ -66,14 +64,15 @@ export function Button({
 }) {
   const { colors } = useTheme();
   const primary = kind === "primary";
-  const fg = primary ? colors.onAccent : colors.ink;
+  const fg = primary ? colors.bg : colors.ink;
   return (
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
       style={({ pressed }) => [
         styles.button,
-        { backgroundColor: primary ? colors.accent : colors.sunken, opacity: pressed ? 0.8 : 1 },
+        primary ? { backgroundColor: colors.ink } : { borderWidth: 1, borderColor: colors.line, paddingVertical: SPACE.md - 1 },
+        { opacity: pressed ? 0.75 : 1 },
       ]}
     >
       {icon && <Ionicons name={icon} size={18} color={fg} />}
@@ -93,9 +92,9 @@ export function Chip({ label, active, onPress }: { label: string; active?: boole
       onPress={onPress}
       accessibilityRole={onPress ? "button" : undefined}
       accessibilityState={onPress ? { selected: !!active } : undefined}
-      style={[styles.chip, { backgroundColor: active ? colors.ink : colors.sunken }]}
+      style={[styles.chip, { backgroundColor: active ? colors.ink : "transparent", borderColor: active ? colors.ink : colors.line }]}
     >
-      <Text variant="meta" style={{ color: active ? colors.bg : colors.inkSoft, fontFamily: FONT.sansMedium }}>
+      <Text variant="meta" style={{ color: active ? colors.bg : colors.ink, fontFamily: FONT.sansMedium }}>
         {label}
       </Text>
     </Pressable>
@@ -149,8 +148,9 @@ export function ComingSoon({ icon, title, body }: { icon: IconName; title: strin
 }
 
 const styles = StyleSheet.create({
-  card: { borderRadius: RADIUS.lg, borderWidth: StyleSheet.hairlineWidth, padding: SPACE.lg + 4, gap: SPACE.md },
-  sectionHeader: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between" },
+  card: { gap: SPACE.md },
+  featured: { padding: SPACE.lg + 2, borderTopWidth: 2, borderRadius: 0 },
+  sectionHeader: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", borderTopWidth: 1.5, paddingTop: SPACE.sm },
   button: {
     flexDirection: "row",
     alignItems: "center",
@@ -158,10 +158,10 @@ const styles = StyleSheet.create({
     gap: SPACE.sm,
     paddingHorizontal: SPACE.lg + 2,
     paddingVertical: SPACE.md,
-    borderRadius: RADIUS.pill,
+    borderRadius: RADIUS.md,
     alignSelf: "flex-start",
   },
-  chip: { paddingHorizontal: SPACE.md, paddingVertical: 6, borderRadius: RADIUS.pill, alignSelf: "flex-start" },
+  chip: { paddingHorizontal: SPACE.md, paddingVertical: 5, borderRadius: RADIUS.md, borderWidth: 1, alignSelf: "flex-start" },
   state: { alignItems: "center", gap: SPACE.md, paddingVertical: SPACE.xxl },
   badge: { width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center" },
 });

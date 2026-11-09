@@ -25,7 +25,7 @@ export default function TabsLayout() {
         tabBarPosition: sidebar ? "left" : "bottom",
         tabBarVariant: sidebar ? "material" : "uikit",
         tabBarLabelPosition: sidebar ? "beside-icon" : "below-icon",
-        tabBarActiveTintColor: colors.accentInk,
+        tabBarActiveTintColor: colors.ink,
         tabBarInactiveTintColor: colors.inkFaint,
         tabBarStyle: {
           backgroundColor: colors.surface,

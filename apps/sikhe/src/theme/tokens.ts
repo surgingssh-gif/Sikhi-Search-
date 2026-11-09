@@ -1,7 +1,7 @@
 /**
- * Sikhe's design tokens. Calm and warm: an off-white page, deep ink, and kesri
- * (saffron) used sparingly for the things that matter most. The dark palette is
- * soft enough to read Gurbani by at Amritvela.
+ * Sikhe's design tokens, in the style of a broadsheet newspaper: a white page,
+ * black ink and rules, serif headlines, small sans-serif labels and one link
+ * blue. The dark palette is soft enough to read Gurbani by at Amritvela.
  */
 
 export interface Colors {
@@ -17,11 +17,13 @@ export interface Colors {
   /** Tertiary text and inactive icons. */
   inkFaint: string;
   line: string;
-  /** Kesri, for small marks and highlights. */
+  /** The heavy rules a newspaper uses between sections. */
+  rule: string;
+  /** The link blue, for small marks and highlights. */
   accent: string;
-  /** Kesri dark enough to read as text on `bg` and `surface`. */
+  /** Blue dark enough to read as text on `bg` and `surface`. */
   accentInk: string;
-  /** A wash of kesri behind featured content. */
+  /** A wash of blue behind highlighted content. */
   accentWash: string;
   /** Text on a filled `accent` button. */
   onAccent: string;
@@ -29,42 +31,51 @@ export interface Colors {
 }
 
 export const LIGHT: Colors = {
-  bg: "#FAF7F2",
+  bg: "#FFFFFF",
   surface: "#FFFFFF",
-  sunken: "#F1ECE3",
-  ink: "#1C1A17",
-  inkSoft: "#5F5A52",
-  inkFaint: "#8F887D",
-  line: "#E6DFD3",
-  accent: "#E8871E",
-  accentInk: "#A85A0C",
-  accentWash: "#FBEBD8",
+  sunken: "#F5F5F3",
+  ink: "#121212",
+  inkSoft: "#5A5A5A",
+  inkFaint: "#727272",
+  line: "#E2E2E2",
+  rule: "#121212",
+  accent: "#326891",
+  accentInk: "#2B5A7E",
+  accentWash: "#EEF3F8",
   onAccent: "#FFFFFF",
   danger: "#B3261E",
 };
 
 export const DARK: Colors = {
-  bg: "#12110F",
-  surface: "#1C1A17",
-  sunken: "#26231F",
-  ink: "#F1ECE3",
-  inkSoft: "#B0A89B",
-  inkFaint: "#7D766B",
-  line: "#2F2B26",
-  accent: "#F0A04B",
-  accentInk: "#F3B26B",
-  accentWash: "#2E2216",
-  onAccent: "#1C1A17",
+  bg: "#121212",
+  surface: "#181818",
+  sunken: "#202020",
+  ink: "#F1F1F1",
+  inkSoft: "#CDCDCD",
+  inkFaint: "#9B9B9B",
+  line: "#2E2E2E",
+  rule: "#F1F1F1",
+  accent: "#7FB3DC",
+  accentInk: "#9CC4E4",
+  accentWash: "#1C2730",
+  onAccent: "#0B1520",
   danger: "#F2B8B5",
 };
 
 /** Font family names, as loaded in the root layout. */
 export const FONT = {
-  display: "Fraunces_600SemiBold",
-  displayItalic: "Fraunces_400Regular_Italic",
-  sans: "Inter_400Regular",
-  sansMedium: "Inter_500Medium",
-  sansBold: "Inter_600SemiBold",
+  /** Headlines: Source Serif 4, bold. */
+  display: "SourceSerif4_700Bold",
+  displayItalic: "SourceSerif4_400Regular_Italic",
+  /** Reading text. */
+  serif: "SourceSerif4_400Regular",
+  serifBold: "SourceSerif4_700Bold",
+  /** Labels, bylines and controls: Libre Franklin. */
+  sans: "LibreFranklin_400Regular",
+  sansMedium: "LibreFranklin_500Medium",
+  sansBold: "LibreFranklin_700Bold",
+  /** The nameplate only. */
+  blackletter: "UnifrakturMaguntia_400Regular",
   gurmukhi: "NotoSerifGurmukhi_400Regular",
   gurmukhiBold: "NotoSerifGurmukhi_600SemiBold",
 } as const;
@@ -72,7 +83,7 @@ export const FONT = {
 /** Spacing steps, in points. */
 export const SPACE = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32, xxxl: 48 } as const;
 
-export const RADIUS = { sm: 8, md: 12, lg: 18, pill: 999 } as const;
+export const RADIUS = { sm: 2, md: 4, lg: 6, pill: 999 } as const;
 
 /** The widest a column of reading gets on a big screen. */
 export const READING_WIDTH = 720;

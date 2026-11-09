@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Link } from "expo-router";
 import { Pressable, View } from "react-native";
 import { CalendarEventRow } from "@/components/CalendarEventRow";
+import { EventRow } from "@/components/History";
 import { HukamnamaCard } from "@/components/HukamnamaCard";
 import { Screen } from "@/components/Screen";
 import { StoryCard } from "@/components/StoryCard";
@@ -12,6 +13,7 @@ import { Card, Divider, ErrorState, Loading, Section } from "@/components/ui";
 import { Wordmark } from "@/components/Wordmark";
 import { friendlyError, localDate, useCalendar, useHistoryAround, useNews } from "@/lib/api";
 import { whenLabel } from "@/lib/calendar";
+import { anniversaryLabel } from "@/lib/history";
 import { NEWS_SECTIONS } from "@/lib/stories";
 import { useTheme } from "@/theme/theme";
 import { FONT, SPACE } from "@/theme/tokens";
@@ -73,20 +75,12 @@ function OnThisDay({ today }: { today: string }) {
   const { data, isPending } = useHistoryAround(today, 0, 6);
   if (isPending || !data?.events.length) return null;
   return (
-    <Section title="This week in Sikh history">
+    <Section title="This week in Sikh history" href="/history" more="More history">
       <Card>
         {data.events.slice(0, 4).map((e, n) => (
           <View key={e.id} style={{ gap: SPACE.md }}>
             {n > 0 && <Divider />}
-            <View style={{ gap: 2 }}>
-              <Text variant="meta" color="accentInk">
-                {e.daysAway === 0 ? "Today" : new Date(`${today.slice(0, 4)}${e.date.slice(4)}T12:00:00`).toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
-                {" · "}
-                {e.yearsAgo} years ago
-              </Text>
-              <Text variant="title">{e.title}</Text>
-              <Text variant="small">{e.summary}</Text>
-            </View>
+            <EventRow event={e} when={anniversaryLabel(e, today)} />
           </View>
         ))}
       </Card>

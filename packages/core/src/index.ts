@@ -35,3 +35,4 @@ export * from "./news/places";
 export * from "./news/rating";
 export * from "./history/events";
 export * from "./calendar/jantri";
+export * from "./history/wikipedia";

@@ -341,3 +341,31 @@ describe("GET /v1/search", () => {
     expect((await app.request("/v1/search?q=waheguru&mode=fuzzy")).status).toBe(400);
   });
 });
+
+describe("Sikh history from Wikipedia", () => {
+  const summary = (title: string) => ({ title, description: "", extract: "", thumbnail: null, url: `https://en.wikipedia.org/wiki/${title}` });
+  const wikipedia = {
+    search: vi.fn(async (q: string) => [summary(`${q} result`)]),
+    summaries: vi.fn(async (titles: string[]) => titles.map(summary)),
+    article: vi.fn(async (title: string) => (title === "Akal Takht" ? { title, description: "", image: null, sections: [], url: "", lastEdited: null } : null)),
+  };
+  const app = createApp({ banidb: banidbWith(async () => shabad), wikipedia });
+
+  it("searches our dated events and Wikipedia", async () => {
+    const res = await app.request("/v1/history/search?q=saragarhi");
+    const body = (await res.json()) as { events: { id: string }[]; articles: { title: string }[]; attribution: string };
+    expect(body.events.length).toBeGreaterThan(0);
+    expect(body.articles[0]!.title).toBe("saragarhi result");
+    expect(body.attribution).toMatch(/CC BY-SA/);
+  });
+
+  it("fills each collection with summaries", async () => {
+    const body = (await (await app.request("/v1/history/collections")).json()) as { collections: { id: string; items: unknown[] }[] };
+    expect(body.collections.find((c) => c.id === "gurus")!.items).toHaveLength(11);
+  });
+
+  it("returns an article, or 404", async () => {
+    expect((await app.request("/v1/history/article?title=Akal%20Takht")).status).toBe(200);
+    expect((await app.request("/v1/history/article?title=Nowhere")).status).toBe(404);
+  });
+});

@@ -17,6 +17,10 @@ import {
   JANTRI_ATTRIBUTION,
   jantriCoversUntil,
   nanakshahiDate,
+  HISTORY_COLLECTIONS,
+  WIKIPEDIA_ATTRIBUTION,
+  WikipediaError,
+  type WikipediaClient,
   slugify,
   type BaniDbClient,
   type JsonLlm,
@@ -33,6 +37,8 @@ export interface AppDeps {
   llm?: JsonLlm;
   /** Library storage and research. Research is absent without model credentials. */
   library?: { store: LibraryStoreLike; research?: (topic: string, onStage: (s: Stage) => void) => Promise<LibraryEntry> };
+  /** Sikh history from Wikipedia. Absent in tests that don't need it. */
+  wikipedia?: Pick<WikipediaClient, "search" | "summaries" | "article">;
   /** Sikh and Punjab news. */
   news?: Pick<NewsService, "latest" | "briefingToday">;
   allowedOrigins?: string[];
@@ -61,7 +67,7 @@ const DiscussBody = AskBody.extend({ shabadId: z.number().int().positive() });
 
 const ResearchBody = z.object({ topic: z.string().trim().min(2).max(120) });
 
-export function createApp({ banidb, llm, library, news, allowedOrigins = [], aiRequestsPerMinute = 10 }: AppDeps) {
+export function createApp({ banidb, llm, library, news, wikipedia, allowedOrigins = [], aiRequestsPerMinute = 10 }: AppDeps) {
   const app = new Hono();
 
   app.use("/v1/*", cors({ origin: allowedOrigins, allowMethods: ["GET", "POST"] }));
@@ -135,6 +141,36 @@ export function createApp({ banidb, llm, library, news, allowedOrigins = [], aiR
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(date))) return c.json({ error: "invalid_date" }, 400);
     const range = (v: string | undefined) => Math.min(Math.max(Number(v ?? 7) || 0, 0), 31);
     return c.json({ events: eventsAround(date, range(c.req.query("before")), range(c.req.query("after"))) });
+  });
+
+  app.get("/v1/history/collections", async (c) => {
+    if (!wikipedia) return c.json({ collections: [] });
+    const collections = await Promise.all(
+      HISTORY_COLLECTIONS.map(async ({ titles, ...rest }) => ({ ...rest, items: await wikipedia.summaries(titles) })),
+    );
+    c.header("cache-control", "public, max-age=86400");
+    return c.json({ collections, attribution: WIKIPEDIA_ATTRIBUTION });
+  });
+
+  app.get("/v1/history/search", searchLimit, async (c) => {
+    const q = (c.req.query("q") ?? "").trim();
+    if (q.length < 2 || q.length > 100) return c.json({ error: "invalid_request" }, 400);
+    // Our own dated events first: every word of the query in the title or summary.
+    const words = q.toLowerCase().split(/\s+/);
+    const events = HISTORY_EVENTS.filter((e) => words.every((w) => `${e.title} ${e.summary}`.toLowerCase().includes(w)));
+    const articles = wikipedia ? await wikipedia.search(q) : [];
+    c.header("cache-control", "public, max-age=3600");
+    return c.json({ events, articles, attribution: WIKIPEDIA_ATTRIBUTION });
+  });
+
+  app.get("/v1/history/article", async (c) => {
+    const title = (c.req.query("title") ?? "").trim();
+    if (!title || title.length > 200) return c.json({ error: "invalid_request" }, 400);
+    if (!wikipedia) return c.json({ error: "not_found" }, 404);
+    const article = await wikipedia.article(title);
+    if (!article) return c.json({ error: "not_found" }, 404);
+    c.header("cache-control", "public, max-age=86400");
+    return c.json({ article, attribution: WIKIPEDIA_ATTRIBUTION });
   });
 
   app.get("/v1/calendar", (c) => {
@@ -260,6 +296,10 @@ export function createApp({ banidb, llm, library, news, allowedOrigins = [], aiR
 }
 
 function errorResponse(err: unknown): { status: ContentfulStatusCode; body: { error: string; message?: string } } {
+  if (err instanceof WikipediaError) {
+    console.error("Wikipedia error:", err.message);
+    return { status: 502, body: { error: "upstream_unavailable" } };
+  }
   if (err instanceof BaniDbNotFoundError) return { status: 404, body: { error: "not_found", message: err.message } };
   if (err instanceof BaniDbError) {
     console.error("BaniDB error:", err.message);

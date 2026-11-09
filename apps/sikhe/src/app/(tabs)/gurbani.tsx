@@ -1,8 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Link, router, type Href } from "expo-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Pressable, StyleSheet, TextInput, View } from "react-native";
 import { Screen } from "@/components/Screen";
+import { SearchBox, useDebounced } from "@/components/SearchBox";
 import { Text } from "@/components/Text";
 import { Card, Chip, Divider, ErrorState, Loading, Section } from "@/components/ui";
 import { friendlyError, useHukamnama } from "@/lib/api";
@@ -17,16 +18,6 @@ const MODES: { id: GurbaniSearchMode; label: string; hint: string }[] = [
   { id: "words", label: "Gurmukhi words", hint: "Whole words in Gurmukhi, such as ਸਤਿ ਨਾਮੁ." },
   { id: "meaning", label: "English meaning", hint: "Words from the English translation, such as peace of mind." },
 ];
-
-/** Waits until typing pauses before searching. */
-function useDebounced<T>(value: T, ms = 350): T {
-  const [settled, setSettled] = useState(value);
-  useEffect(() => {
-    const t = setTimeout(() => setSettled(value), ms);
-    return () => clearTimeout(t);
-  }, [value, ms]);
-  return settled;
-}
 
 /** A row that opens a page: title, a line under it and a chevron. */
 function LinkRow({ href, title, subtitle, gurmukhi }: { href: Href; title: string; subtitle?: string; gurmukhi?: string }) {
@@ -117,25 +108,7 @@ export default function GurbaniScreen() {
   return (
     <Screen title="Gurbani">
       <View style={{ gap: SPACE.sm }}>
-        <View style={[styles.search, { backgroundColor: colors.surface, borderColor: colors.line }]}>
-          <Ionicons name="search" size={18} color={colors.inkFaint} />
-          <TextInput
-            value={query}
-            onChangeText={setQuery}
-            placeholder="Search Gurbani, or type an Ang number"
-            placeholderTextColor={colors.inkFaint}
-            autoCapitalize="none"
-            autoCorrect={false}
-            returnKeyType="search"
-            accessibilityLabel="Search Gurbani"
-            style={[styles.input, { color: colors.ink, fontFamily: /[਀-੿]/.test(query) ? FONT.gurmukhi : FONT.sans }]}
-          />
-          {query.length > 0 && (
-            <Pressable onPress={() => setQuery("")} accessibilityRole="button" accessibilityLabel="Clear search" hitSlop={10}>
-              <Ionicons name="close-circle" size={18} color={colors.inkFaint} />
-            </Pressable>
-          )}
-        </View>
+        <SearchBox value={query} onChange={setQuery} placeholder="Search Gurbani, or type an Ang number" label="Search Gurbani" />
         {searching && (
           <>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: SPACE.sm }}>
@@ -238,8 +211,6 @@ function AngPicker() {
 }
 
 const styles = StyleSheet.create({
-  search: { flexDirection: "row", alignItems: "center", gap: SPACE.sm, borderWidth: StyleSheet.hairlineWidth, borderRadius: RADIUS.md, paddingHorizontal: SPACE.md },
-  input: { flex: 1, fontSize: 16, paddingVertical: SPACE.md, outlineStyle: "none" } as never,
   linkRow: { flexDirection: "row", alignItems: "center", gap: SPACE.md },
   angInput: { width: 80, fontSize: 16, fontFamily: FONT.sans, paddingVertical: SPACE.sm, paddingHorizontal: SPACE.md, borderRadius: RADIUS.sm },
 });

@@ -82,6 +82,8 @@ function Root() {
         <Stack.Screen name="shabad/[id]" />
         <Stack.Screen name="ang/[ang]" />
         <Stack.Screen name="bani/[id]" />
+        <Stack.Screen name="article" />
+        <Stack.Screen name="timeline" />
       </Stack>
     </>
   );

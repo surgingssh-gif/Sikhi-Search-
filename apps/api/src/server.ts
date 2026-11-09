@@ -1,7 +1,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { serve } from "@hono/node-server";
-import { AnthropicJsonLlm, BaniDbClient, NewsService, researchEntry, type BaniSummary, type ModelTier } from "@ask-sikhi/core";
+import { AnthropicJsonLlm, BaniDbClient, NewsService, researchEntry, WikipediaClient, type BaniSummary, type ModelTier } from "@ask-sikhi/core";
 import { createApp } from "./app";
 import { FileLibraryStore } from "./library-store";
 
@@ -42,6 +42,7 @@ const app = createApp({
   allowedOrigins,
   library,
   news,
+  wikipedia: new WikipediaClient(),
   ...(llm ? { llm } : {}),
   ...(process.env.AI_REQUESTS_PER_MINUTE ? { aiRequestsPerMinute: Number(process.env.AI_REQUESTS_PER_MINUTE) } : {}),
 });

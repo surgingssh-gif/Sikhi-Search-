@@ -1,7 +1,7 @@
 /**
- * Sikhe's design tokens, in the style of a broadsheet newspaper: a white page,
- * black ink and rules, serif headlines, small sans-serif labels and one link
- * blue. The dark palette is soft enough to read Gurbani by at Amritvela.
+ * Sikhe's design tokens, in the style of a financial broadsheet: warm paper,
+ * black ink, hairline rules, serif headlines, small spaced sans-serif labels
+ * and one bright blue. The dark palette is soft enough to read Gurbani by at Amritvela.
  */
 
 export interface Colors {
@@ -31,35 +31,35 @@ export interface Colors {
 }
 
 export const LIGHT: Colors = {
-  bg: "#FFFFFF",
-  surface: "#FFFFFF",
-  sunken: "#F5F5F3",
+  bg: "#FBFAF7",
+  surface: "#FBFAF7",
+  sunken: "#F3F1EC",
   ink: "#121212",
-  inkSoft: "#5A5A5A",
-  inkFaint: "#727272",
-  line: "#E2E2E2",
+  inkSoft: "#45443F",
+  inkFaint: "#6B6A66",
+  line: "#DCDAD3",
   rule: "#121212",
-  accent: "#326891",
-  accentInk: "#2B5A7E",
-  accentWash: "#EEF3F8",
+  accent: "#2A78D6",
+  accentInk: "#2266BC",
+  accentWash: "#E9F0F9",
   onAccent: "#FFFFFF",
-  danger: "#B3261E",
+  danger: "#C2383A",
 };
 
 export const DARK: Colors = {
-  bg: "#121212",
-  surface: "#181818",
-  sunken: "#202020",
-  ink: "#F1F1F1",
-  inkSoft: "#CDCDCD",
-  inkFaint: "#9B9B9B",
-  line: "#2E2E2E",
-  rule: "#F1F1F1",
-  accent: "#7FB3DC",
-  accentInk: "#9CC4E4",
-  accentWash: "#1C2730",
+  bg: "#161615",
+  surface: "#161615",
+  sunken: "#1F1F1D",
+  ink: "#F2F1EC",
+  inkSoft: "#C3C2B7",
+  inkFaint: "#9A9890",
+  line: "#2E2E2B",
+  rule: "#F2F1EC",
+  accent: "#3987E5",
+  accentInk: "#6FA8EE",
+  accentWash: "#1B2534",
   onAccent: "#0B1520",
-  danger: "#F2B8B5",
+  danger: "#E66767",
 };
 
 /** Font family names, as loaded in the root layout. */
@@ -83,7 +83,7 @@ export const FONT = {
 /** Spacing steps, in points. */
 export const SPACE = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32, xxxl: 48 } as const;
 
-export const RADIUS = { sm: 2, md: 4, lg: 6, pill: 999 } as const;
+export const RADIUS = { sm: 4, md: 6, lg: 6, pill: 999 } as const;
 
 /** The widest a column of reading gets on a big screen. */
 export const READING_WIDTH = 720;

@@ -24,7 +24,7 @@ function MapButton() {
         accessibilityRole="button"
         accessibilityLabel="Story map"
         hitSlop={8}
-        style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: SPACE.md, paddingVertical: SPACE.sm, borderRadius: 4, borderWidth: 1, borderColor: colors.line }}
+        style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: SPACE.md, paddingVertical: SPACE.sm, borderRadius: 999, borderWidth: 1, borderColor: colors.line }}
       >
         <Ionicons name="map-outline" size={18} color={colors.ink} />
         <Text variant="meta" color="ink">

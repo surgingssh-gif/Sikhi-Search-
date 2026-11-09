@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "expo-router";
-import { Pressable, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { CalendarEventRow } from "@/components/CalendarEventRow";
 import { EventRow } from "@/components/History";
 import { HukamnamaCard } from "@/components/HukamnamaCard";
@@ -22,8 +22,8 @@ function SettingsButton() {
   const { colors } = useTheme();
   return (
     <Link href="/settings" asChild>
-      <Pressable accessibilityRole="button" accessibilityLabel="Settings" hitSlop={10} style={{ padding: SPACE.xs }}>
-        <Ionicons name="settings-outline" size={20} color={colors.ink} />
+      <Pressable accessibilityRole="button" accessibilityLabel="Settings" hitSlop={10} style={{ padding: 6, borderRadius: 999, borderWidth: 1, borderColor: colors.line }}>
+        <Ionicons name="settings-outline" size={16} color={colors.inkSoft} />
       </Pressable>
     </Link>
   );
@@ -88,33 +88,51 @@ function OnThisDay({ today }: { today: string }) {
   );
 }
 
-function NanakshahiLine({ today }: { today: string }) {
-  const { data } = useCalendar(today, 45);
-  if (!data?.today) return null;
-  return (
-    <Text variant="small" style={{ fontFamily: FONT.displayItalic, textAlign: "center" }}>
-      {data.today.label} Nanakshahi · <Text variant="small" style={{ fontFamily: FONT.gurmukhi, fontStyle: "normal" }}>{data.today.labelPa}</Text>
-    </Text>
-  );
-}
-
-/** The front page's nameplate: the date and settings above, the Nanakshahi date below, then a double rule. */
+/**
+ * The front page's nameplate: a small top line, "Sikhe" in blackletter, then a
+ * dateline between a rule and a double rule, with the Gregorian and Nanakshahi
+ * dates side by side.
+ */
 function Masthead({ now, today }: { now: Date; today: string }) {
   const { colors } = useTheme();
+  const { data } = useCalendar(today, 45);
+  const ns = data?.today;
   return (
-    <View style={{ gap: SPACE.sm }}>
+    <View>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-        <Text variant="meta" color="ink" style={{ fontFamily: FONT.sansBold }}>
-          {now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+        <Text variant="meta" color="inkFaint" style={{ fontFamily: FONT.sansMedium }}>
+          Sikh news, Gurbani and history
         </Text>
         <SettingsButton />
       </View>
-      <Wordmark size={52} />
-      <NanakshahiLine today={today} />
-      <View style={{ height: 4, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.rule, marginTop: SPACE.xs }} />
+      <View style={{ marginTop: SPACE.sm, marginBottom: SPACE.md }}>
+        <Wordmark size={40} />
+      </View>
+      <View style={[styles.dateline, { borderTopColor: colors.rule }]}>
+        <Text variant="meta" color="ink" style={[styles.dateText, { flexGrow: 0, flexShrink: 0, flexBasis: "auto" }]} numberOfLines={1}>
+          {now.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric", year: "numeric" })}
+        </Text>
+        {ns && (
+          <>
+            <Text variant="meta" color="ink" style={[styles.dateText, { fontFamily: FONT.gurmukhiBold, textAlign: "center" }]} numberOfLines={1}>
+              {ns.labelPa}
+            </Text>
+            <Text variant="meta" color="inkSoft" style={[styles.dateText, { fontFamily: FONT.displayItalic, fontSize: 12, textAlign: "right" }]} numberOfLines={1}>
+              {ns.label} NS
+            </Text>
+          </>
+        )}
+      </View>
+      {/* The double rule under the dateline. */}
+      <View style={{ height: 4, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.rule }} />
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  dateline: { flexDirection: "row", alignItems: "center", gap: SPACE.sm, borderTopWidth: 1, paddingVertical: 6 },
+  dateText: { flex: 1, fontFamily: FONT.sansBold, fontSize: 11, letterSpacing: 0.2 },
+});
 
 export default function TodayScreen() {
   const queryClient = useQueryClient();

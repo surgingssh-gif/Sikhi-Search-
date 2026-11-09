@@ -10,12 +10,12 @@ export type IconName = ComponentProps<typeof Ionicons>["name"];
 
 /**
  * A block of the page. Like a newspaper column it has no box: rows inside are
- * split by thin rules. `featured` sets it in a shaded box under a heavy rule.
+ * split by hairlines. `featured` sets it in a box with a hairline border.
  */
 export function Card({ children, featured, style }: { children: ReactNode; featured?: boolean; style?: ViewStyle }) {
   const { colors } = useTheme();
   return (
-    <View style={[styles.card, featured && [styles.featured, { backgroundColor: colors.sunken, borderTopColor: colors.rule }], style]}>
+    <View style={[styles.card, featured && [styles.featured, { backgroundColor: colors.surface, borderColor: colors.line }], style]}>
       {children}
     </View>
   );
@@ -71,7 +71,7 @@ export function Button({
       onPress={onPress}
       style={({ pressed }) => [
         styles.button,
-        primary ? { backgroundColor: colors.ink } : { borderWidth: 1, borderColor: colors.line, paddingVertical: SPACE.md - 1 },
+        primary ? { backgroundColor: colors.ink, borderWidth: 1, borderColor: colors.ink } : { borderWidth: 1, borderColor: colors.line },
         { opacity: pressed ? 0.75 : 1 },
       ]}
     >
@@ -94,7 +94,7 @@ export function Chip({ label, active, onPress }: { label: string; active?: boole
       accessibilityState={onPress ? { selected: !!active } : undefined}
       style={[styles.chip, { backgroundColor: active ? colors.ink : "transparent", borderColor: active ? colors.ink : colors.line }]}
     >
-      <Text variant="meta" style={{ color: active ? colors.bg : colors.ink, fontFamily: FONT.sansMedium }}>
+      <Text variant="meta" style={{ color: active ? colors.bg : colors.inkSoft, fontFamily: FONT.sansBold, fontSize: 11, lineHeight: 14, letterSpacing: 0.4 }}>
         {label}
       </Text>
     </Pressable>
@@ -149,19 +149,20 @@ export function ComingSoon({ icon, title, body }: { icon: IconName; title: strin
 
 const styles = StyleSheet.create({
   card: { gap: SPACE.md },
-  featured: { padding: SPACE.lg + 2, borderTopWidth: 2, borderRadius: 0 },
-  sectionHeader: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", borderTopWidth: 1.5, paddingTop: SPACE.sm },
+  featured: { padding: SPACE.lg, borderWidth: 1, borderRadius: RADIUS.md },
+  sectionHeader: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", borderTopWidth: 2, paddingTop: 10 },
   button: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: SPACE.sm,
-    paddingHorizontal: SPACE.lg + 2,
-    paddingVertical: SPACE.md,
-    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACE.lg,
+    paddingVertical: SPACE.sm,
+    borderRadius: RADIUS.pill,
     alignSelf: "flex-start",
+    minHeight: 36,
   },
-  chip: { paddingHorizontal: SPACE.md, paddingVertical: 5, borderRadius: RADIUS.md, borderWidth: 1, alignSelf: "flex-start" },
+  chip: { paddingHorizontal: 11, paddingVertical: 7, borderRadius: RADIUS.pill, borderWidth: 1, alignSelf: "flex-start" },
   state: { alignItems: "center", gap: SPACE.md, paddingVertical: SPACE.xxl },
   badge: { width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center" },
 });

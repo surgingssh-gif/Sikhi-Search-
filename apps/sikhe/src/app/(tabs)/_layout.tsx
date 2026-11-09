@@ -27,6 +27,7 @@ export default function TabsLayout() {
         tabBarLabelPosition: sidebar ? "beside-icon" : "below-icon",
         tabBarActiveTintColor: colors.ink,
         tabBarInactiveTintColor: colors.inkFaint,
+        tabBarActiveBackgroundColor: sidebar ? colors.sunken : undefined,
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopColor: colors.line,

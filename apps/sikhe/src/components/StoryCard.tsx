@@ -161,7 +161,7 @@ export function StoryLead({ item }: { item: NewsItem }) {
           <Text style={[styles.leadTitle, { color: colors.ink }, wide && styles.leadTitleWide]}>{cleanTitle(item.title)}</Text>
           <Snippet item={item} lines={5} />
         </View>
-        {wide ? <Thumb item={item} width={168} height={112} /> : <Thumb item={item} width={84} height={84} />}
+        {wide ? <Thumb item={item} width={144} height={96} /> : <Thumb item={item} width={72} height={72} />}
       </View>
       <Byline item={item} />
     </Story>
@@ -179,7 +179,7 @@ function SmallStory({ item, style, snippet = 0, photo = true }: { item: Story; s
           <Text style={[styles.smallTitle, { color: colors.ink }]}>{cleanTitle(item.title)}</Text>
           {snippet > 0 && <Snippet item={item} lines={snippet} />}
         </View>
-        {photo && <Thumb item={item} width={64} height={64} />}
+        {photo && <Thumb item={item} width={56} height={56} />}
       </View>
       <Byline item={item} />
     </Story>
@@ -228,15 +228,15 @@ export function StoryCard({ item }: { item: NewsItem; variant?: "lead" | "row" }
 }
 
 const styles = StyleSheet.create({
-  kicker: { lineHeight: 14 },
-  kickerKind: { fontFamily: FONT.sansBold, fontSize: 10, lineHeight: 14, letterSpacing: 1 },
-  kickerPlace: { fontFamily: FONT.sans, fontSize: 11, lineHeight: 14 },
+  kicker: { lineHeight: 13 },
+  kickerKind: { fontFamily: FONT.sansBold, fontSize: 9.5, lineHeight: 13, letterSpacing: 1 },
+  kickerPlace: { fontFamily: FONT.sans, fontSize: 10.5, lineHeight: 13 },
   box: { borderWidth: 1, borderRadius: RADIUS.md },
   withThumb: { flexDirection: "row", gap: SPACE.lg, alignItems: "flex-start" },
   lead: { padding: SPACE.lg + 2, gap: SPACE.md, justifyContent: "space-between" },
   leadWide: { padding: SPACE.xl },
-  leadTitle: { fontFamily: FONT.display, fontSize: 23, lineHeight: 28, letterSpacing: -0.2 },
-  leadTitleWide: { fontSize: 28, lineHeight: 33 },
+  leadTitle: { fontFamily: FONT.display, fontSize: 21, lineHeight: 25, letterSpacing: -0.2 },
+  leadTitleWide: { fontSize: 25, lineHeight: 29 },
   small: { padding: SPACE.lg, gap: SPACE.md, justifyContent: "space-between" },
-  smallTitle: { fontFamily: FONT.headline, fontSize: 17, lineHeight: 22 },
+  smallTitle: { fontFamily: FONT.headline, fontSize: 15.5, lineHeight: 20 },
 });

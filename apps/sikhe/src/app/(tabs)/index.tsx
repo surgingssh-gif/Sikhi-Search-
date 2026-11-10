@@ -145,5 +145,5 @@ const styles = StyleSheet.create({
   front: { flexDirection: "row", alignItems: "flex-start" },
   lead: { flex: 1, gap: SPACE.xl, paddingRight: 40 },
   nearPrompt: { gap: SPACE.xs, padding: SPACE.lg, borderWidth: 1, borderRadius: 6 },
-  rail: { width: 360, gap: SPACE.xl, paddingLeft: 36, borderLeftWidth: 1 },
+  rail: { width: 330, gap: SPACE.xl, paddingLeft: 30, borderLeftWidth: 1 },
 });

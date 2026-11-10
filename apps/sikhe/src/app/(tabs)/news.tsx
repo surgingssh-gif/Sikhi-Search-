@@ -188,7 +188,7 @@ export default function NewsScreen() {
 }
 
 const styles = StyleSheet.create({
-  mapButton: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, height: 32, borderRadius: 999, borderWidth: 1 },
+  mapButton: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, height: 29, borderRadius: 999, borderWidth: 1 },
   pillText: { fontFamily: FONT.sansBold, fontSize: 11, letterSpacing: 0.7, textTransform: "uppercase" },
   front: { flexDirection: "row", alignItems: "flex-start", gap: SPACE.md },
   frontLead: { flex: 2, gap: SPACE.md },

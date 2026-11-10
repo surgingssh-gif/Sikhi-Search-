@@ -83,14 +83,14 @@ export const FONT = {
 } as const;
 
 /** Spacing steps, in points. */
-export const SPACE = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32, xxxl: 48 } as const;
+export const SPACE = { xs: 4, sm: 7, md: 10, lg: 14, xl: 20, xxl: 28, xxxl: 40 } as const;
 
 export const RADIUS = { sm: 4, md: 6, lg: 6, pill: 999 } as const;
 
 /** The widest a column of reading gets on a big screen. */
 export const READING_WIDTH = 720;
 /** The widest the page gets, masthead included. */
-export const PAGE_WIDTH = 1160;
+export const PAGE_WIDTH = 1200;
 /** From this width pages set a side column beside the main one. */
 export const WIDE = 980;
 /** Below this width the masthead stacks and its sections scroll sideways. */

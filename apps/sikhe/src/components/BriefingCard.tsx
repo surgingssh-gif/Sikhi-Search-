@@ -74,7 +74,7 @@ export function EditionNote() {
       <Text variant="label" color="inkSoft">
         {`Today's edition · ${day}`}
       </Text>
-      <Text style={{ fontFamily: FONT.displayItalic, fontSize: 19, lineHeight: 27, color: colors.ink }}>{data.lede}</Text>
+      <Text style={{ fontFamily: FONT.displayItalic, fontSize: 17, lineHeight: 24, color: colors.ink }}>{data.lede}</Text>
     </View>
   );
 }

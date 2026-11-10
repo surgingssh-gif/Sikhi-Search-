@@ -10,19 +10,19 @@ import type { Colors } from "@/theme/tokens";
  */
 const VARIANTS = {
   /** Screen titles. */
-  display: { fontFamily: FONT.display, fontSize: 30, lineHeight: 35, letterSpacing: -0.2 },
+  display: { fontFamily: FONT.display, fontSize: 26, lineHeight: 31, letterSpacing: -0.2 },
   /** Lead headlines. */
-  headline: { fontFamily: FONT.display, fontSize: 24, lineHeight: 29, letterSpacing: -0.1 },
+  headline: { fontFamily: FONT.display, fontSize: 21, lineHeight: 26, letterSpacing: -0.1 },
   /** Card and story titles. */
-  title: { fontFamily: FONT.display, fontSize: 17, lineHeight: 22 },
+  title: { fontFamily: FONT.display, fontSize: 15.5, lineHeight: 20 },
   /** Reading text, in serif like a newspaper column. */
-  body: { fontFamily: FONT.serif, fontSize: 16, lineHeight: 25 },
+  body: { fontFamily: FONT.serif, fontSize: 15, lineHeight: 23 },
   /** Body text a step quieter: summaries and translations. */
-  small: { fontFamily: FONT.serif, fontSize: 14, lineHeight: 21 },
+  small: { fontFamily: FONT.serif, fontSize: 13, lineHeight: 19 },
   /** Bylines, dates and sources. */
-  meta: { fontFamily: FONT.sans, fontSize: 11.5, lineHeight: 16 },
+  meta: { fontFamily: FONT.sans, fontSize: 11, lineHeight: 15 },
   /** Section labels, in small spaced capitals. */
-  label: { fontFamily: FONT.sansBold, fontSize: 11, lineHeight: 14, letterSpacing: 1.3, textTransform: "uppercase" },
+  label: { fontFamily: FONT.sansBold, fontSize: 10.5, lineHeight: 13, letterSpacing: 1.2, textTransform: "uppercase" },
   button: { fontFamily: FONT.sansBold, fontSize: 12, lineHeight: 16, letterSpacing: 0.4 },
   gurmukhi: { fontFamily: FONT.gurmukhi, fontSize: 22, lineHeight: 38 },
   gurmukhiLarge: { fontFamily: FONT.gurmukhi, fontSize: 26, lineHeight: 44 },

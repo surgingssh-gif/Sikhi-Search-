@@ -131,7 +131,7 @@ export function Masthead() {
       <View style={{ marginTop: SPACE.md, marginBottom: SPACE.md }}>
         <Link href="/" asChild>
           <Pressable accessibilityRole="link" accessibilityLabel="Sikhe, today">
-            <Wordmark size={narrow ? 30 : 34} />
+            <Wordmark size={narrow ? 27 : 30} />
           </Pressable>
         </Link>
       </View>
@@ -196,9 +196,9 @@ export function Footer() {
 const styles = StyleSheet.create({
   topbar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: SPACE.md },
   topbarRight: { flexDirection: "row", alignItems: "center", gap: SPACE.sm },
-  finder: { flexDirection: "row", alignItems: "center", gap: 6, borderWidth: 1, borderRadius: 999, paddingHorizontal: 11, height: 32 },
+  finder: { flexDirection: "row", alignItems: "center", gap: 6, borderWidth: 1, borderRadius: 999, paddingHorizontal: 11, height: 29 },
   finderInput: { flex: 1, fontFamily: FONT.sansMedium, fontSize: 12, paddingVertical: 0, minWidth: 0 },
-  pill: { flexDirection: "row", alignItems: "center", gap: 5, borderWidth: 1, borderRadius: 999, paddingHorizontal: 11, height: 32 },
+  pill: { flexDirection: "row", alignItems: "center", gap: 5, borderWidth: 1, borderRadius: 999, paddingHorizontal: 11, height: 29 },
   pillText: { fontFamily: FONT.sansBold, fontSize: 10.5, letterSpacing: 0.7, textTransform: "uppercase" },
   dateline: { flexDirection: "row", alignItems: "center", gap: SPACE.md, borderTopWidth: 1, paddingVertical: 6 },
   dateText: { flex: 1, fontFamily: FONT.sansMedium, fontSize: 11, letterSpacing: 0.2, textAlign: "center" },

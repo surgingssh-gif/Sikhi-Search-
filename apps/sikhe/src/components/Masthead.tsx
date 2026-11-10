@@ -3,7 +3,6 @@ import { Link, router, usePathname, type Href } from "expo-router";
 import { useState } from "react";
 import { Platform, Pressable, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from "react-native";
 import { localDate, useCalendar } from "@/lib/api";
-import { daysUntil } from "@/lib/calendar";
 import { useTheme } from "@/theme/theme";
 import { FONT, NARROW, SPACE } from "@/theme/tokens";
 import { Text } from "./Text";
@@ -70,38 +69,9 @@ function Pill({ label, icon, onPress, href }: { label?: string; icon?: keyof typ
   );
 }
 
-/** Upcoming days in the Sikh calendar, in a strip under the sections, like a ticker. */
-function CalendarStrip() {
-  const { colors } = useTheme();
-  const today = localDate();
-  const { data } = useCalendar(today, 45);
-  const days = (data?.events ?? []).filter((e) => e.date >= today && (e.major || e.category === "sangrand")).slice(0, 8);
-  if (!days.length) return null;
-  return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.strip, { borderBottomColor: colors.line }]}>
-      {days.map((e, i) => {
-        const n = daysUntil(e.date, today);
-        return (
-          <Link key={e.id} href="/calendar" asChild>
-            <Pressable accessibilityRole="link" style={StyleSheet.flatten([styles.stripItem, i > 0 && { borderLeftWidth: 1, borderLeftColor: colors.line, paddingLeft: 14 }])}>
-              <Text variant="meta" color="ink" style={{ fontFamily: FONT.sansBold, fontSize: 11.5 }} numberOfLines={1}>
-                {e.en.replace(/ Sri Guru .*| Sahib Ji$/, "")}
-              </Text>
-              <Text variant="meta" color={n === 0 ? "accentInk" : "inkSoft"} style={{ fontSize: 11.5 }}>
-                {n === 0 ? "today" : n === 1 ? "tomorrow" : `in ${n} days`}
-              </Text>
-            </Pressable>
-          </Link>
-        );
-      })}
-    </ScrollView>
-  );
-}
-
 /**
- * The newspaper header on every section: a top line with search and the
- * theme switch, the nameplate, the dateline, the sections and a strip of
- * coming days.
+ * The newspaper header on every section, kept to three lines: the date with
+ * search and the theme switch, the nameplate, and the sections.
  */
 export function Masthead() {
   const { colors, dark, setAppearance } = useTheme();
@@ -117,8 +87,9 @@ export function Masthead() {
     <View>
       <View style={styles.topbar}>
         {!narrow && (
-          <Text variant="meta" color="inkFaint" style={{ fontFamily: FONT.sansMedium, flex: 1 }}>
-            Good news from the Sikh kaum · Chardi Kala
+          <Text variant="meta" color="inkSoft" style={{ fontFamily: FONT.sansMedium, flex: 1 }} numberOfLines={1}>
+            {now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+            {ns ? <Text variant="meta" color="inkFaint">{`  ·  ${ns.label}`}</Text> : null}
           </Text>
         )}
         <View style={[styles.topbarRight, narrow && { flex: 1 }]}>
@@ -128,7 +99,7 @@ export function Masthead() {
         </View>
       </View>
 
-      <View style={{ marginTop: SPACE.md, marginBottom: SPACE.md }}>
+      <View style={{ marginTop: narrow ? SPACE.md : 2, marginBottom: SPACE.sm }}>
         <Link href="/" asChild>
           <Pressable accessibilityRole="link" accessibilityLabel="Sikhe, today">
             <Wordmark size={narrow ? 30 : 36} />
@@ -136,19 +107,13 @@ export function Masthead() {
         </Link>
       </View>
 
-      <View style={[styles.dateline, { borderTopColor: colors.rule }, narrow && { flexDirection: "column", gap: 4 }]}>
-        <Text variant="meta" color="ink" style={[styles.dateText, !narrow && { textAlign: "left" }]} numberOfLines={1}>
-          {ns ? `${ns.label} Nanakshahi · ` : ""}
-          {ns && <Text style={{ fontFamily: FONT.gurmukhiBold, fontSize: 11 }}>{ns.labelPa}</Text>}
+      {narrow && (
+        <Text variant="meta" color="inkSoft" style={{ textAlign: "center", marginBottom: SPACE.sm }} numberOfLines={1}>
+          {now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+          {ns ? `  ·  ${ns.label}` : ""}
         </Text>
-        <Text variant="meta" color="ink" style={[styles.dateText, { fontFamily: FONT.sansBold }]} numberOfLines={1}>
-          {now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
-        </Text>
-        <Text variant="meta" color="inkSoft" style={[styles.dateText, { fontFamily: FONT.displayItalic, fontSize: 12 }, !narrow && { textAlign: "right" }]} numberOfLines={1}>
-          A learning guide, not a religious authority.
-        </Text>
-      </View>
-      {/* The double rule under the dateline. */}
+      )}
+      {/* The double rule under the nameplate. */}
       <View style={{ height: 4, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.rule }} />
 
       <ScrollView
@@ -172,7 +137,6 @@ export function Masthead() {
         })}
       </ScrollView>
 
-      <CalendarStrip />
     </View>
   );
 }
@@ -200,12 +164,8 @@ const styles = StyleSheet.create({
   finderInput: { flex: 1, fontFamily: FONT.sansMedium, fontSize: 12, paddingVertical: 0, minWidth: 0 },
   pill: { flexDirection: "row", alignItems: "center", gap: 5, borderWidth: 1, borderRadius: 999, paddingHorizontal: 11, height: 29 },
   pillText: { fontFamily: FONT.sansBold, fontSize: 10.5, letterSpacing: 0.7, textTransform: "uppercase" },
-  dateline: { flexDirection: "row", alignItems: "center", gap: SPACE.md, borderTopWidth: 1, paddingVertical: 6 },
-  dateText: { flex: 1, fontFamily: FONT.sansMedium, fontSize: 11, letterSpacing: 0.2, textAlign: "center" },
   sectionsBar: { borderBottomWidth: 1, flexGrow: 0 },
   sections: { flexDirection: "row", gap: 22, paddingVertical: 4 },
   section: { paddingVertical: 6, borderBottomWidth: 2 },
-  strip: { borderBottomWidth: 1, flexGrow: 0 },
-  stripItem: { flexDirection: "row", alignItems: "baseline", gap: 6, paddingVertical: 8, paddingRight: 14 },
   footer: { marginTop: SPACE.xxl },
 });

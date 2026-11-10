@@ -76,27 +76,23 @@ function Kicker({ item }: { item: NewsItem }) {
   );
 }
 
-/** "Also in The Indian Express and 2 more", for a story several outlets covered. */
+/** "+2 more outlets", for a story several outlets covered. */
 function alsoIn(item: Story): string {
-  const others = (item.also ?? []).map(outletName);
-  if (!others.length) return "";
-  return others.length === 1 ? `Also in ${others[0]}` : `Also in ${others[0]} and ${others.length - 1} more`;
+  const n = item.also?.length ?? 0;
+  return n ? `+${n} more ${n === 1 ? "outlet" : "outlets"}` : "";
 }
 
-function Byline({ item, time = true }: { item: Story; time?: boolean }) {
+/** One quiet line: the outlet, when, and how many others covered it. */
+function Byline({ item }: { item: Story }) {
   const also = alsoIn(item);
   return (
-    <View style={{ gap: 2 }}>
-      <Text variant="meta" color="inkFaint" numberOfLines={1}>
+    <Text variant="meta" color="inkFaint" numberOfLines={1}>
+      <Text variant="meta" color="inkSoft" style={{ fontFamily: FONT.sansMedium }}>
         {outletName(item.source)}
-        {time && item.publishedAt ? `  ·  ${when(item)}` : ""}
       </Text>
-      {also ? (
-        <Text variant="meta" color="inkFaint" numberOfLines={1} style={{ fontStyle: "italic" }}>
-          {also}
-        </Text>
-      ) : null}
-    </View>
+      {item.publishedAt ? `  ·  ${when(item)}` : ""}
+      {also ? `  ·  ${also}` : ""}
+    </Text>
   );
 }
 
@@ -159,7 +155,7 @@ export function StoryLead({ item }: { item: NewsItem }) {
         <View style={{ flex: 1, gap: SPACE.sm }}>
           <Kicker item={item} />
           <Text style={[styles.leadTitle, { color: colors.ink }, wide && styles.leadTitleWide]}>{cleanTitle(item.title)}</Text>
-          <Snippet item={item} lines={5} />
+          <Snippet item={item} lines={3} />
         </View>
         {wide ? <Thumb item={item} width={144} height={96} /> : <Thumb item={item} width={72} height={72} />}
       </View>
@@ -174,7 +170,7 @@ function SmallStory({ item, style, snippet = 0, photo = true }: { item: Story; s
   return (
     <Story item={item} style={[styles.small, style]}>
       <View style={styles.withThumb}>
-        <View style={{ flex: 1, gap: 6 }}>
+        <View style={{ flex: 1, gap: 5 }}>
           <Kicker item={item} />
           <Text style={[styles.smallTitle, { color: colors.ink }]}>{cleanTitle(item.title)}</Text>
           {snippet > 0 && <Snippet item={item} lines={snippet} />}
@@ -191,14 +187,14 @@ export function StoryHeadlines({ items, fill = false }: { items: NewsItem[]; fil
   return (
     <View style={[{ gap: SPACE.md }, fill && { flexGrow: 1 }]}>
       {items.map((item) => (
-        <SmallStory key={item.id} item={item} snippet={3} style={fill ? { flexGrow: 1 } : undefined} />
+        <SmallStory key={item.id} item={item} snippet={2} style={fill ? { flexGrow: 1 } : undefined} />
       ))}
     </View>
   );
 }
 
 /** Story boxes side by side, all one height; stacked on a phone. */
-export function StoryColumns({ items, snippet = 4 }: { items: NewsItem[]; snippet?: number }) {
+export function StoryColumns({ items, snippet = 2 }: { items: NewsItem[]; snippet?: number }) {
   const [width, setWidth] = useState(0);
   const across = width >= 600;
   // A photo only where a column is wide enough to keep the headline roomy.
@@ -217,7 +213,7 @@ export function StoryList({ items }: { items: NewsItem[] }) {
   const tile = two ? (width - SPACE.md) / 2 : width;
   return (
     <View onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)} style={{ flexDirection: "row", flexWrap: "wrap", gap: SPACE.md }}>
-      {width > 0 && items.map((item) => <SmallStory key={item.id} item={item} snippet={3} style={{ width: tile }} />)}
+      {width > 0 && items.map((item) => <SmallStory key={item.id} item={item} style={{ width: tile }} />)}
     </View>
   );
 }
@@ -232,11 +228,11 @@ const styles = StyleSheet.create({
   kickerKind: { fontFamily: FONT.sansBold, fontSize: 9.5, lineHeight: 13, letterSpacing: 1 },
   kickerPlace: { fontFamily: FONT.sans, fontSize: 10.5, lineHeight: 13 },
   box: { borderWidth: 1, borderRadius: RADIUS.md },
-  withThumb: { flexDirection: "row", gap: SPACE.lg, alignItems: "flex-start" },
+  withThumb: { flexDirection: "row", gap: SPACE.md, alignItems: "flex-start" },
   lead: { padding: SPACE.lg + 2, gap: SPACE.md, justifyContent: "space-between" },
   leadWide: { padding: SPACE.xl },
   leadTitle: { fontFamily: FONT.display, fontSize: 20, lineHeight: 24.5, letterSpacing: -0.2 },
   leadTitleWide: { fontSize: 26, lineHeight: 30.5 },
-  small: { padding: SPACE.lg, gap: SPACE.md, justifyContent: "space-between" },
+  small: { padding: SPACE.lg, gap: SPACE.sm + 2, justifyContent: "space-between" },
   smallTitle: { fontFamily: FONT.headline, fontSize: 16, lineHeight: 20.5, letterSpacing: -0.1 },
 });

@@ -117,7 +117,7 @@ export default function NewsScreen() {
   };
 
   return (
-    <Screen masthead title="News" kicker="Good news from the Sikh kaum, America first" right={<MapButton />} refreshing={refreshing} onRefresh={refresh}>
+    <Screen masthead refreshing={refreshing} onRefresh={refresh}>
       <View style={{ gap: SPACE.sm }}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -SPACE.xl + 4 }} contentContainerStyle={{ gap: SPACE.sm, paddingHorizontal: SPACE.xl - 4 }}>
           {sections.map((s) => (
@@ -131,6 +131,7 @@ export default function NewsScreen() {
               }}
             />
           ))}
+          <MapButton />
         </ScrollView>
         {sectionId === "top" ? (
           <EditionNote />
@@ -153,7 +154,7 @@ export default function NewsScreen() {
             <View style={wide ? styles.front : { gap: SPACE.md }}>
               <View style={wide ? styles.frontLead : undefined}>
                 <StoryLead item={lead} />
-                {belowLead.length > 0 && <StoryColumns items={belowLead} snippet={3} />}
+                {belowLead.length > 0 && <StoryColumns items={belowLead} />}
               </View>
               {beside.length > 0 && (
                 <View style={wide ? styles.frontSide : undefined}>

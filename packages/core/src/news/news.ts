@@ -47,6 +47,8 @@ export interface NewsItem {
   tone: StoryTone;
   /** The kind of good news, or null for a story that isn't good news about Sikhs. */
   kind: GoodNewsKind | null;
+  /** How notable and interesting the story is, 0-3. */
+  appeal: number;
   /** The story happens in the United States. */
   america: boolean;
   /** Whether interest and tone come from the model or a keyword guess. */
@@ -66,11 +68,20 @@ const HOMELAND = new Set<PlaceRegion>(["Punjab", "India", "Pakistan"]);
 const googleNews = (q: string, edition: "US" | "CA" | "GB") =>
   `https://news.google.com/rss/search?q=${encodeURIComponent(`${q} when:14d`)}&hl=en-${edition}&gl=${edition}&ceid=${edition}:en`;
 
+/** National and big-city outlets in the United States, searched by name. */
+export const US_MAJOR = ["apnews.com", "nytimes.com", "washingtonpost.com", "nbcnews.com", "cbsnews.com", "abcnews.go.com", "npr.org", "cnn.com", "usatoday.com", "latimes.com", "sfchronicle.com", "reuters.com", "pbs.org", "time.com"];
+/** The same elsewhere: the UK, Canada and Australia. */
+export const WORLD_MAJOR = ["bbc.co.uk", "bbc.com", "theguardian.com", "independent.co.uk", "cbc.ca", "theglobeandmail.com", "thestar.com", "ctvnews.ca", "abc.net.au", "sbs.com.au"];
+
 export const DEFAULT_FEEDS: NewsFeed[] = [
   // Sikh news from America and the diaspora, gathered by Google News from local and national outlets.
   { id: "gnews-us", name: "Google News", url: googleNews("Sikh", "US"), language: "en", categories: ["panth"], aggregator: true, max: 60 },
   { id: "gnews-us-gurdwara", name: "Google News", url: googleNews("gurdwara", "US"), language: "en", categories: ["panth"], aggregator: true, max: 30 },
   { id: "gnews-ca", name: "Google News", url: googleNews("Sikh", "CA"), language: "en", categories: ["panth"], aggregator: true, max: 30 },
+  // Major outlets, whose Sikh stories are usually the most substantial.
+  { id: "gnews-us-major", name: "Google News", url: googleNews(`Sikh (${US_MAJOR.map((d) => `site:${d}`).join(" OR ")})`, "US"), language: "en", categories: ["panth"], aggregator: true, max: 40 },
+  { id: "gnews-world-major", name: "Google News", url: googleNews(`Sikh (${WORLD_MAJOR.map((d) => `site:${d}`).join(" OR ")})`, "GB"), language: "en", categories: ["panth"], aggregator: true, max: 40 },
+  { id: "gnews-us-sikh-american", name: "Google News", url: googleNews(`"Sikh American" OR "Sikh Americans"`, "US"), language: "en", categories: ["panth"], aggregator: true, max: 30 },
   // Searches aimed at good news, so there is always plenty of it.
   { id: "gnews-us-good", name: "Google News", url: googleNews(`Sikh (honored OR honoured OR award OR "first Sikh" OR elected OR appointed OR celebrates OR celebration OR parade OR "nagar kirtan")`, "US"), language: "en", categories: ["panth"], aggregator: true, max: 30 },
   { id: "gnews-us-seva", name: "Google News", url: googleNews(`(Sikh OR gurdwara) (langar OR seva OR volunteers OR donate OR "free meals" OR charity OR interfaith)`, "US"), language: "en", categories: ["panth"], aggregator: true, max: 30 },
@@ -279,7 +290,7 @@ export class NewsService {
     const ids = new Set(items.map((i) => i.id));
     for (const item of items) {
       const r = this.ratings.get(item.id);
-      if (r) Object.assign(item, { interest: r.interest, tone: r.tone, kind: r.kind, america: r.america, rated: "model" });
+      if (r) Object.assign(item, { interest: r.interest, tone: r.tone, kind: r.kind, appeal: r.appeal, america: r.america, rated: "model" });
     }
     const dropped = new Set<string>();
     for (const item of items) {

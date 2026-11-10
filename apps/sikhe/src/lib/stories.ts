@@ -10,18 +10,33 @@ export const isSikhNews = (i: NewsItem) => i.categories.includes("panth") && not
 const recent = (i: NewsItem, now = Date.now()) => !i.publishedAt || now - new Date(i.publishedAt).getTime() < 21 * 86_400_000;
 /** Good news about Sikhs proper: an achievement, seva, a celebration, heritage or young Sikhs. */
 export const isGoodNews = (i: NewsItem) => i.tone === "uplifting" && i.kind !== null && i.kind !== "community" && recent(i);
+/** Good news notable enough for the front: a story worth reading, not a notice or a press release. */
+export const isFrontPage = (i: NewsItem) => isGoodNews(i) && (i.appeal ?? 1) >= 2;
 /** Good news, or friendly everyday community news. */
 export const isFriendly = (i: NewsItem) => i.tone !== "negative" && i.kind !== null && recent(i);
 /** The harder news of the Panth: justice, disputes and dealings with governments. Kept apart from the good news. */
 export const isHardNews = (i: NewsItem) => i.categories.includes("panth") && i.kind === null && i.interest >= 1;
 
+/** Outlets with real newsrooms, whose stories tend to have the most substance. */
+const MAJOR_OUTLET =
+  /\b(associated press|ap news|new york times|washington post|nbc|cbs|abc news|npr|cnn|usa today|los angeles times|san francisco chronicle|reuters|pbs|time|bbc|guardian|independent|cbc|globe and mail|toronto star|ctv|abc \(australia\)|sbs)\b/i;
+
 /**
- * How high a story goes: what a Sikh in America wants to read, good news, a
- * photo, and freshness. A day's age costs about a quarter of a level of interest.
+ * How high a story goes: how notable it is above all, then how much a Sikh in
+ * America wants it, good news, a real newsroom and freshness. A day's age
+ * costs a fifth of a level of appeal.
  */
 export function storyScore(i: NewsItem, now = Date.now()): number {
   const days = i.publishedAt ? Math.max(0, (now - new Date(i.publishedAt).getTime()) / 86_400_000) : 7;
-  return i.interest + (i.tone === "uplifting" ? 0.5 : 0) + (i.tone === "negative" ? -2 : 0) + (i.image ? 0.3 : 0) - days * 0.25;
+  return (
+    (i.appeal ?? 1) * 1.2 +
+    i.interest * 0.5 +
+    (i.tone === "uplifting" ? 0.3 : 0) +
+    (i.tone === "negative" ? -2 : 0) +
+    (MAJOR_OUTLET.test(i.source) ? 0.4 : 0) +
+    (i.image ? 0.2 : 0) -
+    days * 0.2
+  );
 }
 
 /** Best stories first. */
@@ -89,7 +104,12 @@ export const NEWS_SECTIONS: NewsSection[] = [
     id: "top",
     label: "Good news",
     blurb: "The best of today's good news from the Sikh kaum, America first.",
-    stories: (items) => capPerPlace(dedupe(ranked(items.filter(isGoodNews))), 2),
+    stories: (items) => {
+      // Notable stories first; if a quiet day has too few, the best of the rest follow.
+      const front = capPerPlace(dedupe(ranked(items.filter(isFrontPage))), 2);
+      const rest = dedupe(ranked(items.filter((i) => isGoodNews(i) && !isFrontPage(i))));
+      return front.length >= 12 ? front : [...front, ...rest];
+    },
   },
   { id: "achievement", label: "Achievements", blurb: "Firsts, honours, elections and Sikhs excelling at what they do.", stories: ofKind("achievement") },
   { id: "seva", label: "Seva", blurb: "Langar, relief, charity and Sikhs serving their neighbours.", stories: ofKind("seva") },

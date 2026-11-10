@@ -50,9 +50,11 @@ export function outletName(source: string): string {
 
 /** A headline without the section tag some outlets add: "… a year | Trending" becomes "… a year". */
 export function cleanTitle(title: string): string {
-  return title
-    .replace(/\s+[|–—-]\s+(Trending|Latest|News|Breaking|Watch|Video|Photos?|Exclusive|Opinion)\s*$/i, "")
-    .replace(/\s+\|\s+[^|]{1,30}$/, "")
+  // Outlets add tails after a bar: "| Trending", "| Tap to know more | Inshorts". The headline is what comes first.
+  const [first = title] = title.split(/\s+\|\s+/);
+  return (first.length >= 20 ? first : title)
+    .replace(/\s+[–—-]\s+(Trending|Latest|News|Breaking|Watch|Video|Photos?|Exclusive|Opinion)\s*$/i, "")
+    .replace(/\s*\((Video|Watch|Photos?)\)\s*$/i, "")
     .trim();
 }
 

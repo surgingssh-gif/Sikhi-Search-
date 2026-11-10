@@ -96,13 +96,14 @@ describe("NewsService", () => {
 describe("guessRating", () => {
   const sikh = { panthic: true, sikhOutlet: false };
   it("rates good news about Sikhs in America highest", () => {
-    expect(guessRating("Gold domes now welcome worshippers at new Sikh temple", { ...sikh, region: "United States" })).toEqual({ interest: 3, tone: "uplifting", kind: "community", america: true });
+    expect(guessRating("Gold domes now welcome worshippers at new Sikh temple", { ...sikh, region: "United States" })).toEqual({ interest: 3, tone: "uplifting", kind: "community", appeal: 1, america: true });
   });
   it("marks crime and violence negative and lowers its interest", () => {
     expect(guessRating("Firing outside gurdwara in Ludhiana's Jagraon, masked man leaves threat letter", { ...sikh, region: "Punjab" })).toEqual({
       interest: 0,
       tone: "negative",
       kind: null,
+      appeal: 0,
       america: false,
     });
   });
@@ -135,9 +136,9 @@ describe("NewsService ratings", () => {
         // Oldest first: parade, festival, langar.
         return {
           ratings: [
-            { id: ids[0], interest: 3, tone: "uplifting", kind: "celebration", america: true, duplicateOf: null },
-            { id: ids[1], interest: 3, tone: "uplifting", kind: "celebration", america: true, duplicateOf: ids[0] },
-            { id: ids[2], interest: 2, tone: "neutral", kind: "seva", america: true, duplicateOf: null },
+            { id: ids[0], interest: 3, tone: "uplifting", kind: "celebration", appeal: 3, america: true, duplicateOf: null },
+            { id: ids[1], interest: 3, tone: "uplifting", kind: "celebration", appeal: 2, america: true, duplicateOf: ids[0] },
+            { id: ids[2], interest: 2, tone: "neutral", kind: "seva", appeal: 1, america: true, duplicateOf: null },
           ],
         };
       },
@@ -154,7 +155,7 @@ describe("NewsService ratings", () => {
     await service.settled();
     const after = await service.latest();
     expect(after.items.map((i) => i.title)).toEqual(["Gurdwara holds langar", "Sikh parade draws thousands in Yuba City"]);
-    expect(after.items[1]).toMatchObject({ interest: 3, tone: "uplifting", kind: "celebration", rated: "model" });
+    expect(after.items[1]).toMatchObject({ interest: 3, tone: "uplifting", kind: "celebration", appeal: 3, rated: "model" });
     expect(calls).toHaveLength(1);
   });
 

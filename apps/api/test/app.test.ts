@@ -260,6 +260,7 @@ describe("News routes", () => {
     interest: 2,
     tone: "neutral",
     kind: null,
+    appeal: 1,
     america: false,
     rated: "guess",
   });

@@ -175,6 +175,8 @@ export interface NewsServiceOptions {
   now?: () => number;
   /** How many article pages to read per refresh for a preview image. 0 turns it off. */
   maxPreviewFetches?: number;
+  /** How many Google News links to follow to the publisher per refresh, for its address and photo. 0 turns it off. */
+  maxLinkResolves?: number;
 }
 
 export interface NewsBriefing {
@@ -261,8 +263,10 @@ export class NewsService {
     });
     items.sort((a, b) => (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""));
     await this.fillImages(items);
+    this.applyResolved(items);
     this.applyRatings(items);
     void this.rateInBackground(items);
+    void this.resolveInBackground(items);
     return { items, failed };
   }
 
@@ -315,9 +319,57 @@ export class NewsService {
     return this.rating;
   }
 
-  /** Waits for any model rating in progress (for tests). */
+  /** Waits for any model rating and link resolving in progress (for tests). */
   async settled(): Promise<void> {
-    await this.rating;
+    await Promise.all([this.rating, this.resolving]);
+  }
+
+  /** Google News links followed to the publisher's article, with its photo; `null` if that failed. Remembered per link. */
+  private readonly resolved = new Map<string, { url: string; image: string | null } | null>();
+  private resolving: Promise<void> | null = null;
+
+  /** Points stories from Google News at the publisher's own article, with its photo, where that's known. */
+  private applyResolved(items: NewsItem[]): void {
+    for (const item of items) {
+      const r = this.resolved.get(item.url);
+      if (!r) continue;
+      item.url = r.url;
+      item.image ??= r.image;
+    }
+  }
+
+  /**
+   * Follows Google News links to the publisher in the background, a few at a
+   * time, good news first, so the page never waits for it. Each story is
+   * updated in place when its link resolves.
+   */
+  private resolveInBackground(items: NewsItem[]): Promise<void> {
+    const max = this.options.maxLinkResolves ?? 80;
+    if (max === 0 || this.resolving) return this.resolving ?? Promise.resolve();
+    const todo = items
+      .filter((i) => isGoogleNewsLink(i.url) && !this.resolved.has(i.url))
+      .sort((a, b) => Number(b.kind !== null) - Number(a.kind !== null) || b.interest - a.interest)
+      .slice(0, max);
+    if (!todo.length) return Promise.resolve();
+    this.resolving = (async () => {
+      let next = 0;
+      await Promise.all(
+        Array.from({ length: Math.min(4, todo.length) }, async () => {
+          while (next < todo.length) {
+            const item = todo[next++]!;
+            const link = item.url;
+            const url = await resolveGoogleNewsUrl(link, this.fetchImpl);
+            const image = url && !item.image ? await fetchPreviewImage(url, this.fetchImpl) : null;
+            this.resolved.set(link, url ? { url, image } : null);
+            if (url) {
+              item.url = url;
+              item.image ??= image;
+            }
+          }
+        }),
+      );
+    })().finally(() => (this.resolving = null));
+    return this.resolving;
   }
 
   /** Page preview images for stories whose feed has no photo (Panthic stories first), remembered per URL. */
@@ -326,7 +378,7 @@ export class NewsService {
   private async fillImages(items: NewsItem[]): Promise<void> {
     for (const item of items) if (!item.image && this.previewImages.has(item.url)) item.image = this.previewImages.get(item.url) ?? null;
     const missing = items
-      .filter((i) => !i.image && !this.previewImages.has(i.url) && !i.url.startsWith("https://news.google.com/"))
+      .filter((i) => !i.image && !this.previewImages.has(i.url) && !isGoogleNewsLink(i.url))
       .sort((a, b) => Number(b.categories.includes("panth")) - Number(a.categories.includes("panth")))
       .slice(0, this.options.maxPreviewFetches ?? 30);
     let next = 0;
@@ -422,6 +474,72 @@ function placeOf(title: string, snippet: string) {
   const p = placeFor(title, snippet);
   if (p) return { name: p.name, region: p.region, lat: p.lat, lng: p.lng };
   return null;
+}
+
+const BROWSER_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130 Safari/537.36";
+
+export const isGoogleNewsLink = (url: string) => /^https:\/\/news\.google\.com\/(rss\/)?articles\//.test(url);
+
+/** Reads a response's text until `done` says it has what it needs, or `limit` characters. */
+async function readUntil(res: Response, done: (text: string) => boolean, limit: number): Promise<string> {
+  if (!res.body) return "";
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let text = "";
+  while (text.length < limit) {
+    const { value, done: end } = await reader.read();
+    if (end) break;
+    text += decoder.decode(value, { stream: true });
+    if (done(text)) break;
+  }
+  void reader.cancel().catch(() => {});
+  return text;
+}
+
+/**
+ * The publisher's own address for a Google News link. Google's links carry
+ * an encoded id; its article page gives a signature and time for that id,
+ * and Google's own decoding endpoint turns the three into the publisher's
+ * URL. Returns null if any step fails.
+ */
+export async function resolveGoogleNewsUrl(link: string, fetchImpl: typeof globalThis.fetch = globalThis.fetch): Promise<string | null> {
+  const id = /\/articles\/([^?/#]+)/.exec(link)?.[1];
+  if (!id) return null;
+  try {
+    const page = await fetchImpl(`https://news.google.com/rss/articles/${id}`, {
+      headers: { accept: "text/html", "user-agent": BROWSER_UA },
+      signal: AbortSignal.timeout(8000),
+      redirect: "follow",
+    });
+    if (!page.ok) return null;
+    const has = (t: string) => /data-n-a-sg="[^"]+"/.test(t) && /data-n-a-ts="[^"]+"/.test(t);
+    const html = await readUntil(page, has, 2_000_000);
+    const sg = /data-n-a-sg="([^"]+)"/.exec(html)?.[1];
+    const ts = /data-n-a-ts="([^"]+)"/.exec(html)?.[1];
+    if (!sg || !ts) return null;
+    const request = JSON.stringify([
+      "garturlreq",
+      [["X", "X", ["X", "X"], null, null, 1, 1, "US:en", null, 1, null, null, null, null, null, 0, 1], "X", "X", 1, [1, 1, 1], 1, 1, null, 0, 0, null, 0],
+      id,
+      Number(ts),
+      sg,
+    ]);
+    const res = await fetchImpl("https://news.google.com/_/DotsSplashUi/data/batchexecute", {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded;charset=UTF-8", "user-agent": BROWSER_UA },
+      body: `f.req=${encodeURIComponent(JSON.stringify([[["Fbv4je", request, null, "generic"]]]))}`,
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return null;
+    // The reply is ")]}'" then a blank line, then JSON whose payload is itself JSON: ["garturlres", url, ...].
+    const body = (await res.text()).split("\n\n")[1];
+    if (!body) return null;
+    const payload = (JSON.parse(body) as unknown[][])[0]?.[2];
+    const url = typeof payload === "string" ? (JSON.parse(payload) as unknown[])[1] : null;
+    return typeof url === "string" && /^https?:\/\//.test(url) && !isGoogleNewsLink(url) ? url : null;
+  } catch {
+    return null;
+  }
 }
 
 /** A page's preview image (og:image or twitter:image), read from the first part of its HTML. */

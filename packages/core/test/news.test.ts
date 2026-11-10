@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
-import { cleanSnippet, DEFAULT_FEEDS, guessRating, imageFrom, NewsService, parseFeed, placeFor, slugify, type NewsFeed } from "../src";
+import { cleanSnippet, DEFAULT_FEEDS, guessRating, imageFrom, NewsService, parseFeed, placeFor, resolveGoogleNewsUrl, slugify, type NewsFeed } from "../src";
 import { fakeLlm } from "./fakes";
 
 // Fixtures are real responses recorded from each publisher's RSS feed.
@@ -218,5 +218,49 @@ describe("imageFrom", () => {
   it("skips video embeds and uses an <img> in the HTML", () => {
     expect(imageFrom({ "media:content": { "@_url": "https://www.youtube.com/embed/x" } })).toBeNull();
     expect(imageFrom({ description: '<p><img src="https://example.org/a.jpg" /></p>' })).toBe("https://example.org/a.jpg");
+  });
+});
+
+describe("Google News links", () => {
+  const link = "https://news.google.com/rss/articles/CBMiABC123?oc=5";
+  const article = "https://www.example-paper.com/news/sikh-volunteers-serve-langar";
+  // A stand-in for Google: the article page carries a signature, the decoding endpoint answers with the publisher's URL.
+  const google = (answer = article) =>
+    vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+      const u = String(url);
+      if (u === "https://news.google.com/rss/articles/CBMiABC123") return new Response('<html><c-wiz><div data-n-a-sg="SIG" data-n-a-ts="1700000000"></div></c-wiz></html>');
+      if (u.includes("batchexecute")) {
+        const req = decodeURIComponent(String(init?.body).slice("f.req=".length));
+        expect(req).toContain("CBMiABC123");
+        expect(req).toContain("SIG");
+        return new Response(`)]}'\n\n${JSON.stringify([["wrb.fr", "Fbv4je", JSON.stringify(["garturlres", answer, 1])]])}`);
+      }
+      if (u === article) return new Response('<html><head><meta property="og:image" content="https://www.example-paper.com/photo.jpg"></head></html>');
+      return new Response("", { status: 404 });
+    });
+
+  it("follows a Google News link to the publisher's article", async () => {
+    expect(await resolveGoogleNewsUrl(link, google() as unknown as typeof fetch)).toBe(article);
+  });
+
+  it("gives up quietly when Google doesn't answer", async () => {
+    const fetch = vi.fn(async () => new Response("", { status: 500 }));
+    expect(await resolveGoogleNewsUrl(link, fetch as unknown as typeof globalThis.fetch)).toBeNull();
+    expect(await resolveGoogleNewsUrl("https://example.org/not-google", fetch as unknown as typeof globalThis.fetch)).toBeNull();
+  });
+
+  it("points Google News stories at the publisher, with its photo, in the background", async () => {
+    const goog = google();
+    const fetch = vi.fn(async (url: string | URL | Request, init?: RequestInit) =>
+      String(url) === "https://feed.test/rss"
+        ? new Response(`<rss><channel><item><title>Sikh volunteers serve langar - Example Paper</title><link>${link}</link><source url="https://www.example-paper.com">Example Paper</source><pubDate>Sat, 24 Oct 2026 10:00:00 GMT</pubDate></item></channel></rss>`)
+        : goog(url, init),
+    );
+    const feeds: NewsFeed[] = [{ id: "g", name: "Google News", url: "https://feed.test/rss", language: "en", categories: ["panth"], aggregator: true }];
+    const service = new NewsService({ feeds, fetch: fetch as unknown as typeof globalThis.fetch, maxPreviewFetches: 0 });
+    const first = await service.latest();
+    expect(first.items[0]).toMatchObject({ url: link, image: null });
+    await service.settled();
+    expect((await service.latest()).items[0]).toMatchObject({ url: article, image: "https://www.example-paper.com/photo.jpg", source: "Example Paper" });
   });
 });

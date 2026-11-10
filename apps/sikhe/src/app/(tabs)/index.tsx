@@ -45,22 +45,17 @@ function TopStories({ wide }: { wide: boolean }) {
   if (isPending) return <Loading label="Gathering the news…" />;
   if (error) return <ErrorState message={friendlyError(error)} onRetry={() => refetch()} />;
   const stories = NEWS_SECTIONS[0]!.stories(data.items).filter((i) => i.language === "en");
-  const lead = stories.find((i) => i.image) ?? stories[0];
+  const lead = stories[0];
   if (!lead) return <Text variant="small">No stories right now.</Text>;
   const others = stories.filter((i) => i !== lead);
-  // Picture cards only for stories with photos; the rest go in the list.
-  const photos = others.filter((i) => i.image);
-  const grid = photos.length < 2 ? [] : photos.slice(0, wide ? 3 : 4);
+  // The next few become posters; the rest go in the list.
+  const grid = others.slice(0, wide ? 3 : 5);
   const inGrid = new Set(grid.map((i) => i.id));
   const list = others.filter((i) => !inGrid.has(i.id)).slice(0, wide ? 6 : 4);
   return (
     <View style={{ gap: SPACE.xl }}>
       <StoryCard item={lead} variant="lead" />
-      {grid.length > 0 && (
-        <View style={{ paddingTop: SPACE.lg, borderTopWidth: 1, borderTopColor: colors.line }}>
-          <StoryGrid items={grid} />
-        </View>
-      )}
+      {grid.length > 0 && <StoryGrid items={grid} />}
       <BriefingCard items={data.items} />
       <StoryList items={list} />
       <View style={{ alignItems: "center" }}>

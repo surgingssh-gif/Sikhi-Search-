@@ -84,12 +84,11 @@ export default function NewsScreen() {
   // The newest-first sections keep strict order, split by day.
   const latest = sectionId === "latest" || sectionId === "panth";
   const stories = data ? section.stories(data.items) : [];
-  // Lead with a photo when the section has one near the top; the newest-first section keeps strict order.
-  const lead = latest ? undefined : (stories.slice(0, 5).find((i) => i.image) ?? stories[0]);
+  // The best story leads as a poster; the newest-first sections keep strict order.
+  const lead = latest ? undefined : stories[0];
   const others = stories.filter((i) => i !== lead);
-  // The grid is only stories with photos, so it reads as a page of pictures; the rest go in the list.
-  const photos = others.filter((i) => i.image);
-  const grid = latest || photos.length < 2 ? [] : photos.slice(0, GRID);
+  // The next few become posters; the rest go in the list.
+  const grid = latest ? [] : others.slice(0, GRID);
   const inGrid = new Set(grid.map((i) => i.id));
   const river = others.filter((i) => !inGrid.has(i.id));
 
@@ -131,9 +130,7 @@ export default function NewsScreen() {
         <>
           {lead && <StoryCard item={lead} variant="lead" />}
           {grid.length > 0 && (
-            <View style={{ gap: SPACE.lg, paddingTop: SPACE.lg, borderTopWidth: 1, borderTopColor: colors.line }}>
-              <StoryGrid items={grid} />
-            </View>
+            <StoryGrid items={grid} />
           )}
           {sectionId === "top" && <BriefingCard items={data.items} />}
           {river.length > 0 && (

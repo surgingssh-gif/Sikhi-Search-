@@ -1,6 +1,6 @@
 import { LibreFranklin_400Regular, LibreFranklin_500Medium, LibreFranklin_700Bold } from "@expo-google-fonts/libre-franklin";
 import { NotoSerifGurmukhi_400Regular, NotoSerifGurmukhi_600SemiBold } from "@expo-google-fonts/noto-serif-gurmukhi";
-import { SourceSerif4_400Regular, SourceSerif4_400Regular_Italic, SourceSerif4_700Bold } from "@expo-google-fonts/source-serif-4";
+import { SourceSerif4_400Regular, SourceSerif4_400Regular_Italic, SourceSerif4_600SemiBold, SourceSerif4_700Bold } from "@expo-google-fonts/source-serif-4";
 import { UnifrakturMaguntia_400Regular } from "@expo-google-fonts/unifrakturmaguntia";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
@@ -42,6 +42,7 @@ export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     SourceSerif4_400Regular,
     SourceSerif4_400Regular_Italic,
+    SourceSerif4_600SemiBold,
     SourceSerif4_700Bold,
     LibreFranklin_400Regular,
     LibreFranklin_500Medium,

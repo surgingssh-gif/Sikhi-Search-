@@ -69,6 +69,8 @@ export const FONT = {
   displayItalic: "SourceSerif4_400Regular_Italic",
   /** Reading text. */
   serif: "SourceSerif4_400Regular",
+  /** News headlines: a step lighter than the bold display face, for easy scanning. */
+  headline: "SourceSerif4_600SemiBold",
   serifBold: "SourceSerif4_700Bold",
   /** Labels, bylines and controls: Libre Franklin. */
   sans: "LibreFranklin_400Regular",

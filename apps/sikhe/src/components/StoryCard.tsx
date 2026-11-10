@@ -235,8 +235,8 @@ const styles = StyleSheet.create({
   withThumb: { flexDirection: "row", gap: SPACE.lg, alignItems: "flex-start" },
   lead: { padding: SPACE.lg + 2, gap: SPACE.md, justifyContent: "space-between" },
   leadWide: { padding: SPACE.xl },
-  leadTitle: { fontFamily: FONT.display, fontSize: 21, lineHeight: 25, letterSpacing: -0.2 },
-  leadTitleWide: { fontSize: 25, lineHeight: 29 },
+  leadTitle: { fontFamily: FONT.display, fontSize: 20, lineHeight: 24.5, letterSpacing: -0.2 },
+  leadTitleWide: { fontSize: 26, lineHeight: 30.5 },
   small: { padding: SPACE.lg, gap: SPACE.md, justifyContent: "space-between" },
-  smallTitle: { fontFamily: FONT.headline, fontSize: 15.5, lineHeight: 20 },
+  smallTitle: { fontFamily: FONT.headline, fontSize: 16, lineHeight: 20.5, letterSpacing: -0.1 },
 });

@@ -131,7 +131,7 @@ export function Masthead() {
       <View style={{ marginTop: SPACE.md, marginBottom: SPACE.md }}>
         <Link href="/" asChild>
           <Pressable accessibilityRole="link" accessibilityLabel="Sikhe, today">
-            <Wordmark size={narrow ? 27 : 30} />
+            <Wordmark size={narrow ? 30 : 36} />
           </Pressable>
         </Link>
       </View>

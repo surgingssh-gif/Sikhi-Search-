@@ -70,11 +70,11 @@ export function EditionNote() {
   if (!data?.lede) return null;
   const day = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
   return (
-    <View style={{ gap: SPACE.xs, paddingLeft: SPACE.md, borderLeftWidth: 2, borderLeftColor: colors.accent }}>
-      <Text variant="label" color="inkSoft">
-        {`Today's edition · ${day}`}
+    <View style={{ gap: 3, paddingLeft: SPACE.md, borderLeftWidth: 2, borderLeftColor: colors.accent }}>
+      <Text style={{ fontFamily: FONT.sansBold, fontSize: 9.5, lineHeight: 13, letterSpacing: 1.2, color: colors.accentInk }}>
+        {`TODAY'S EDITION  ·  ${day.toUpperCase()}`}
       </Text>
-      <Text style={{ fontFamily: FONT.displayItalic, fontSize: 17, lineHeight: 24, color: colors.ink }}>{data.lede}</Text>
+      <Text style={{ fontFamily: FONT.displayItalic, fontSize: 15, lineHeight: 21, color: colors.inkSoft }}>{data.lede}</Text>
     </View>
   );
 }

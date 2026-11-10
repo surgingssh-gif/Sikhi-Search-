@@ -18,7 +18,7 @@ const VARIANTS = {
   /** Reading text, in serif like a newspaper column. */
   body: { fontFamily: FONT.serif, fontSize: 15, lineHeight: 23 },
   /** Body text a step quieter: summaries and translations. */
-  small: { fontFamily: FONT.serif, fontSize: 13, lineHeight: 19 },
+  small: { fontFamily: FONT.serif, fontSize: 13.5, lineHeight: 19.5 },
   /** Bylines, dates and sources. */
   meta: { fontFamily: FONT.sans, fontSize: 11, lineHeight: 15 },
   /** Section labels, in small spaced capitals. */

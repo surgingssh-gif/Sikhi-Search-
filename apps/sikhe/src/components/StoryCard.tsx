@@ -1,3 +1,4 @@
+import { Image } from "expo-image";
 import { useState } from "react";
 import { Pressable, StyleSheet, useWindowDimensions, View, type LayoutChangeEvent } from "react-native";
 import type { NewsItem } from "@/lib/api";
@@ -7,9 +8,10 @@ import { FONT, NARROW, RADIUS, SPACE } from "@/theme/tokens";
 import { Text } from "./Text";
 
 /**
- * News, set like a newspaper in type, no photos. Each story sits in its own
- * box: a hairline border on the paper, slightly rounded, darker on hover.
- * Boxes in a row share one height, so the page reads as a tidy grid.
+ * News, set like a newspaper. Each story sits in its own box: a hairline
+ * border on the paper, slightly rounded, darker on hover. A story's photo is
+ * kept small, beside the headline, so the type leads and the photos never
+ * shout. Boxes in a row share one height, so the page reads as a tidy grid.
  */
 
 const KIND_LABEL: Record<NonNullable<NewsItem["kind"]>, string> = {
@@ -108,16 +110,36 @@ function Story({ item, style, children }: { item: NewsItem; style?: object; chil
   );
 }
 
-/** The lead story: the biggest headline on the page, with its summary. Grows to fill its column. */
+/** A story's photo, small. Leaves itself out if there's none or it won't load. */
+function Thumb({ item, width, height }: { item: NewsItem; width: number; height: number }) {
+  const { colors } = useTheme();
+  const [failed, setFailed] = useState(false);
+  if (!item.image || failed) return null;
+  return (
+    <Image
+      source={item.image}
+      style={{ width, height, borderRadius: RADIUS.sm, backgroundColor: colors.sunken }}
+      contentFit="cover"
+      transition={200}
+      onError={() => setFailed(true)}
+      accessibilityIgnoresInvertColors
+    />
+  );
+}
+
+/** The lead story: the biggest headline on the page, with its summary and a small photo. Grows to fill its column. */
 export function StoryLead({ item }: { item: NewsItem }) {
   const { colors } = useTheme();
   const wide = useWindowDimensions().width >= NARROW;
   return (
     <Story item={item} style={[styles.lead, wide && styles.leadWide]}>
-      <Kicker item={item} />
-      <View style={{ gap: SPACE.md }}>
-        <Text style={[styles.leadTitle, { color: colors.ink }, wide && styles.leadTitleWide]}>{cleanTitle(item.title)}</Text>
-        <Snippet item={item} lines={4} />
+      <View style={styles.withThumb}>
+        <View style={{ flex: 1, gap: SPACE.sm }}>
+          <Kicker item={item} />
+          <Text style={[styles.leadTitle, { color: colors.ink }, wide && styles.leadTitleWide]}>{cleanTitle(item.title)}</Text>
+          <Snippet item={item} lines={3} />
+        </View>
+        {wide ? <Thumb item={item} width={168} height={112} /> : <Thumb item={item} width={84} height={84} />}
       </View>
       <Byline item={item} />
     </Story>
@@ -129,10 +151,13 @@ function SmallStory({ item, style, snippet = 0 }: { item: NewsItem; style?: obje
   const { colors } = useTheme();
   return (
     <Story item={item} style={[styles.small, style]}>
-      <View style={{ gap: 6 }}>
-        <Kicker item={item} />
-        <Text style={[styles.smallTitle, { color: colors.ink }]}>{cleanTitle(item.title)}</Text>
-        {snippet > 0 && <Snippet item={item} lines={snippet} />}
+      <View style={styles.withThumb}>
+        <View style={{ flex: 1, gap: 6 }}>
+          <Kicker item={item} />
+          <Text style={[styles.smallTitle, { color: colors.ink }]}>{cleanTitle(item.title)}</Text>
+          {snippet > 0 && <Snippet item={item} lines={snippet} />}
+        </View>
+        <Thumb item={item} width={64} height={64} />
       </View>
       <Byline item={item} />
     </Story>
@@ -183,10 +208,11 @@ const styles = StyleSheet.create({
   kickerKind: { fontFamily: FONT.sansBold, fontSize: 10, lineHeight: 14, letterSpacing: 1 },
   kickerPlace: { fontFamily: FONT.sans, fontSize: 11, lineHeight: 14 },
   box: { borderWidth: 1, borderRadius: RADIUS.md },
-  lead: { padding: SPACE.xl, gap: SPACE.lg, justifyContent: "space-between", minHeight: 220 },
-  leadWide: { padding: SPACE.xxl, flexGrow: 1 },
-  leadTitle: { fontFamily: FONT.display, fontSize: 27, lineHeight: 32, letterSpacing: -0.3 },
-  leadTitleWide: { fontSize: 36, lineHeight: 41 },
+  withThumb: { flexDirection: "row", gap: SPACE.lg, alignItems: "flex-start" },
+  lead: { padding: SPACE.lg + 2, gap: SPACE.md, justifyContent: "space-between" },
+  leadWide: { padding: SPACE.xl, flexGrow: 1 },
+  leadTitle: { fontFamily: FONT.display, fontSize: 23, lineHeight: 28, letterSpacing: -0.2 },
+  leadTitleWide: { fontSize: 28, lineHeight: 33 },
   small: { padding: SPACE.lg, gap: SPACE.md, justifyContent: "space-between" },
   smallTitle: { fontFamily: FONT.headline, fontSize: 17, lineHeight: 22 },
 });

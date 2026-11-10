@@ -16,7 +16,7 @@ import { FONT, SPACE, WIDE } from "@/theme/tokens";
 /** How many stories the list shows before "Show more", and how many more each tap. */
 const PAGE = 15;
 /** Headlines beside the lead, and stories in the row of three under it. */
-const BESIDE = 4;
+const BESIDE = 3;
 const ACROSS = 3;
 
 function MapButton() {

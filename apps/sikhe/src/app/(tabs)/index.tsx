@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { StyleSheet, useWindowDimensions, View } from "react-native";
+import { BriefingCard } from "@/components/BriefingCard";
 import { CalendarEventRow } from "@/components/CalendarEventRow";
 import { EventRow } from "@/components/History";
 import { HukamnamaCard } from "@/components/HukamnamaCard";
@@ -36,17 +37,19 @@ function SikhCalendar({ today }: { today: string }) {
   );
 }
 
-function TopStories() {
+/** The front page's news: the lead story, the Briefing, then the top stories. */
+function TopStories({ count }: { count: number }) {
   const { data, error, isPending, refetch } = useNews();
-  if (isPending) return <Loading />;
+  if (isPending) return <Loading label="Gathering the news…" />;
   if (error) return <ErrorState message={friendlyError(error)} onRetry={() => refetch()} />;
   const stories = NEWS_SECTIONS[0]!.stories(data.items).filter((i) => i.language === "en");
   const lead = stories.find((i) => i.image) ?? stories[0];
-  const rest = stories.filter((i) => i !== lead).slice(0, 4);
+  const rest = stories.filter((i) => i !== lead).slice(0, count);
   if (!lead) return <Text variant="small">No stories right now.</Text>;
   return (
     <View style={{ gap: SPACE.lg }}>
       <StoryCard item={lead} variant="lead" />
+      <BriefingCard items={data.items} />
       {rest.map((item) => (
         <View key={item.id} style={{ gap: SPACE.lg }}>
           <Divider />
@@ -90,15 +93,15 @@ export default function TodayScreen() {
 
   return (
     <Screen masthead refreshing={refreshing} onRefresh={refresh}>
-      {/* The front page: the lead column, and beside it on wide screens a rail of dates. */}
+      {/* The front page: the news leads, and beside it on wide screens a rail with the Hukamnama and the dates. */}
       <View style={wide ? styles.front : { gap: SPACE.xl }}>
         <View style={wide ? styles.lead : { gap: SPACE.xl }}>
-          <HukamnamaCard />
           <Section title="Top stories" href="/news" more="All news">
-            <TopStories />
+            <TopStories count={wide ? 10 : 7} />
           </Section>
         </View>
         <View style={wide ? [styles.rail, { borderLeftColor: colors.line }] : { gap: SPACE.xl }}>
+          <HukamnamaCard />
           <SikhCalendar today={today} />
           <OnThisDay today={today} />
         </View>

@@ -60,7 +60,7 @@ export async function scheduleReminders(prefs: ReminderPrefs, now = new Date()):
 
   if (prefs.hukamnama) {
     await Notifications.scheduleNotificationAsync({
-      content: { title: "Today's Hukamnama", body: "The Hukamnama from Sri Darbar Sahib is ready to read.", data: { url: "/" } },
+      content: { title: "Today's Hukamnama", body: "The Hukamnama from Sri Darbar Sahib is ready to read.", data: { url: "/hukamnama" } },
       trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour: prefs.hour, minute: prefs.minute, channelId: CHANNEL },
     });
   }

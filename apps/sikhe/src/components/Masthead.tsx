@@ -13,6 +13,7 @@ import { Wordmark } from "./Wordmark";
 export const SECTIONS: { href: Href; label: string; match: (path: string) => boolean }[] = [
   { href: "/", label: "Today", match: (p) => p === "/" },
   { href: "/news", label: "News", match: (p) => p.startsWith("/news") },
+  { href: "/hukamnama", label: "Hukamnama", match: (p) => p.startsWith("/hukamnama") },
   { href: "/gurbani", label: "Gurbani", match: (p) => p.startsWith("/gurbani") },
   { href: "/history", label: "History", match: (p) => p.startsWith("/history") },
   { href: "/ask", label: "Ask", match: (p) => p.startsWith("/ask") },

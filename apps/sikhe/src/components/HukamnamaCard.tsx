@@ -1,54 +1,49 @@
-import { useState } from "react";
-import { View } from "react-native";
-import { friendlyError, useHukamnama } from "@/lib/api";
-import { englishOf, isHeading, openingLines } from "@/lib/shabad";
-import { SPACE } from "@/theme/tokens";
+import { Link } from "expo-router";
+import { Pressable, StyleSheet } from "react-native";
+import { useHukamnama } from "@/lib/api";
+import { englishOf, openingLines } from "@/lib/shabad";
+import { useTheme } from "@/theme/theme";
+import { RADIUS, SPACE } from "@/theme/tokens";
 import { Text } from "./Text";
-import { Button, Card, ErrorState, Loading } from "./ui";
 
 /**
- * Today's Hukamnama from Sri Darbar Sahib, live from BaniDB: the opening lines
- * with their meaning, and the whole shabad a tap away.
+ * A small preview of today's Hukamnama for the front page: the opening line
+ * and its meaning, with the whole Hukamnama on its own page.
  */
 export function HukamnamaCard() {
-  const { data, error, isPending, refetch } = useHukamnama();
-  const [open, setOpen] = useState(false);
+  const { colors } = useTheme();
+  const { data } = useHukamnama();
   const shabad = data?.shabads[0];
+  const first = shabad ? openingLines(shabad.verses, 1)[0] : undefined;
 
   return (
-    <Card featured>
-      <Text variant="label">Today&apos;s Hukamnama</Text>
-      {isPending ? (
-        <Loading />
-      ) : error || !shabad ? (
-        <ErrorState message={error ? friendlyError(error) : "Today's Hukamnama hasn't been published yet."} onRetry={() => refetch()} />
-      ) : (
-        <>
-          <View style={{ gap: SPACE.lg }}>
-            {(open ? shabad.verses : openingLines(shabad.verses, 2)).map((v) =>
-              isHeading(v) ? (
-                <Text key={v.verseId} variant="meta" style={{ fontStyle: "italic" }}>
-                  {englishOf(v)}
-                </Text>
-              ) : (
-                <View key={v.verseId} style={{ gap: SPACE.xs }}>
-                  <Text variant="gurmukhiLarge">{v.gurmukhi}</Text>
-                  <Text variant="small">{englishOf(v)}</Text>
-                </View>
-              ),
-            )}
-          </View>
-          <Text variant="meta">
-            Sri Darbar Sahib · Ang {shabad.ang}
-            {shabad.writer ? ` · ${shabad.writer.english}` : ""}
-            {shabad.raag ? ` · ${shabad.raag.english}` : ""}
-          </Text>
-          <Button label={open ? "Show less" : "Read the full shabad"} kind="quiet" icon={open ? "chevron-up" : "book-outline"} onPress={() => setOpen(!open)} />
-          <Text variant="meta" color="inkFaint" style={{ fontSize: 11 }}>
-            {data.attribution}
-          </Text>
-        </>
-      )}
-    </Card>
+    <Link href="/hukamnama" asChild>
+      <Pressable accessibilityRole="link" accessibilityLabel="Read today's Hukamnama" style={StyleSheet.flatten([styles.card, { borderColor: colors.line, backgroundColor: colors.surface }])}>
+        <Text variant="label">Today&apos;s Hukamnama</Text>
+        {first ? (
+          <>
+            <Text variant="gurmukhi" style={{ fontSize: 18, lineHeight: 30 }} numberOfLines={2}>
+              {first.gurmukhi}
+            </Text>
+            <Text variant="small" numberOfLines={2}>
+              {englishOf(first)}
+            </Text>
+            <Text variant="meta">
+              Sri Darbar Sahib · Ang {shabad!.ang}
+              {shabad!.writer ? ` · ${shabad!.writer.english}` : ""}
+            </Text>
+          </>
+        ) : (
+          <Text variant="small">From Sri Darbar Sahib, Amritsar.</Text>
+        )}
+        <Text variant="button" color="accentInk">
+          Read today&apos;s Hukamnama ›
+        </Text>
+      </Pressable>
+    </Link>
   );
 }
+
+const styles = StyleSheet.create({
+  card: { gap: SPACE.sm, padding: SPACE.lg, borderWidth: 1, borderRadius: RADIUS.md },
+});

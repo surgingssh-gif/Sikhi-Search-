@@ -132,7 +132,7 @@ export default function GurbaniScreen() {
         <>
           {today && (
             <Card featured>
-              <LinkRow href={`/shabad/${today.shabadId}`} title="Today's Hukamnama" subtitle={`Sri Darbar Sahib · Ang ${today.ang}`} />
+              <LinkRow href="/hukamnama" title="Today's Hukamnama" subtitle={`Sri Darbar Sahib · Ang ${today.ang}`} />
             </Card>
           )}
 

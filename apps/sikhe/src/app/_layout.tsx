@@ -32,7 +32,7 @@ function useReminders() {
       .catch(() => {});
     const sub = Notifications.addNotificationResponseReceivedListener((response) => {
       const url = response.notification.request.content.data?.url;
-      if (url === "/" || url === "/calendar") router.push(url);
+      if (url === "/" || url === "/hukamnama" || url === "/calendar") router.push(url);
     });
     return () => sub.remove();
   }, []);
@@ -83,6 +83,7 @@ function Root() {
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="calendar" />
+        <Stack.Screen name="hukamnama" />
         <Stack.Screen name="settings" />
         <Stack.Screen name="map" />
         <Stack.Screen name="shabad/[id]" />

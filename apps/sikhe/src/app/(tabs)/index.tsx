@@ -1,19 +1,20 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { router } from "expo-router";
+import { Link, router } from "expo-router";
 import { useState } from "react";
-import { StyleSheet, useWindowDimensions, View } from "react-native";
-import { BriefingCard } from "@/components/BriefingCard";
+import { Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
+import { BriefingCard, EditionNote } from "@/components/BriefingCard";
 import { CalendarEventRow } from "@/components/CalendarEventRow";
 import { EventRow } from "@/components/History";
 import { HukamnamaCard } from "@/components/HukamnamaCard";
 import { Screen } from "@/components/Screen";
-import { StoryColumns, StoryLead, StoryList } from "@/components/StoryCard";
+import { StoryColumns, StoryHeadlines, StoryLead, StoryList } from "@/components/StoryCard";
 import { Text } from "@/components/Text";
 import { Button, Card, Divider, ErrorState, Loading, Section } from "@/components/ui";
 import { friendlyError, localDate, useCalendar, useHistoryAround, useNews } from "@/lib/api";
 import { whenLabel } from "@/lib/calendar";
 import { anniversaryLabel } from "@/lib/history";
-import { NEWS_SECTIONS } from "@/lib/stories";
+import { useArea } from "@/lib/area";
+import { NEWS_SECTIONS, nearSection } from "@/lib/stories";
 import { useTheme } from "@/theme/theme";
 import { SPACE, WIDE } from "@/theme/tokens";
 
@@ -52,6 +53,7 @@ function TopStories({ wide }: { wide: boolean }) {
   const list = stories.slice(4, wide ? 10 : 8);
   return (
     <View style={{ gap: SPACE.md }}>
+      <EditionNote />
       <StoryLead item={lead} />
       {across.length > 0 && <StoryColumns items={across} />}
       <BriefingCard items={data.items} />
@@ -60,6 +62,32 @@ function TopStories({ wide }: { wide: boolean }) {
         <Button label="More good news" kind="quiet" icon="newspaper-outline" onPress={() => router.navigate("/news")} />
       </View>
     </View>
+  );
+}
+
+/** Good news from the reader's own area, or an invitation to choose one. */
+function NearYou() {
+  const { colors } = useTheme();
+  const { area } = useArea();
+  const { data } = useNews();
+  if (!area) {
+    return (
+      <Link href="/settings" asChild>
+        <Pressable accessibilityRole="link" style={StyleSheet.flatten([styles.nearPrompt, { borderColor: colors.line }])}>
+          <Text variant="label">Near you</Text>
+          <Text variant="small">See the good news from your own Sangat.</Text>
+          <Text variant="button" color="accentInk">
+            Choose your area ›
+          </Text>
+        </Pressable>
+      </Link>
+    );
+  }
+  const stories = data ? nearSection(area).stories(data.items).slice(0, 3) : [];
+  return (
+    <Section title={`Near you · ${area.label}`} href="/news" more="More">
+      {stories.length ? <StoryHeadlines items={stories} /> : <Text variant="small">No new stories from {area.label} this week.</Text>}
+    </Section>
   );
 }
 
@@ -105,6 +133,7 @@ export default function TodayScreen() {
         </View>
         <View style={wide ? [styles.rail, { borderLeftColor: colors.line }] : { gap: SPACE.xl }}>
           <HukamnamaCard />
+          <NearYou />
           <SikhCalendar today={today} />
           <OnThisDay today={today} />
         </View>
@@ -116,5 +145,6 @@ export default function TodayScreen() {
 const styles = StyleSheet.create({
   front: { flexDirection: "row", alignItems: "flex-start" },
   lead: { flex: 1, gap: SPACE.xl, paddingRight: 40 },
+  nearPrompt: { gap: SPACE.xs, padding: SPACE.lg, borderWidth: 1, borderRadius: 6 },
   rail: { width: 360, gap: SPACE.xl, paddingLeft: 36, borderLeftWidth: 1 },
 });

@@ -2,7 +2,7 @@ import { Image } from "expo-image";
 import { useState } from "react";
 import { Pressable, StyleSheet, useWindowDimensions, View, type LayoutChangeEvent } from "react-native";
 import type { NewsItem } from "@/lib/api";
-import { openStory, timeAgo } from "@/lib/stories";
+import { openStory, timeAgo, type Story } from "@/lib/stories";
 import { useTheme } from "@/theme/theme";
 import { FONT, NARROW, RADIUS, SPACE } from "@/theme/tokens";
 import { Text } from "./Text";
@@ -73,20 +73,37 @@ function Kicker({ item }: { item: NewsItem }) {
   );
 }
 
-function Byline({ item, time = true }: { item: NewsItem; time?: boolean }) {
+/** "Also in The Indian Express and 2 more", for a story several outlets covered. */
+function alsoIn(item: Story): string {
+  const others = (item.also ?? []).map(outletName);
+  if (!others.length) return "";
+  return others.length === 1 ? `Also in ${others[0]}` : `Also in ${others[0]} and ${others.length - 1} more`;
+}
+
+function Byline({ item, time = true }: { item: Story; time?: boolean }) {
+  const also = alsoIn(item);
   return (
-    <Text variant="meta" color="inkFaint" numberOfLines={1}>
-      {outletName(item.source)}
-      {time && item.publishedAt ? `  ·  ${when(item)}` : ""}
-    </Text>
+    <View style={{ gap: 2 }}>
+      <Text variant="meta" color="inkFaint" numberOfLines={1}>
+        {outletName(item.source)}
+        {time && item.publishedAt ? `  ·  ${when(item)}` : ""}
+      </Text>
+      {also ? (
+        <Text variant="meta" color="inkFaint" numberOfLines={1} style={{ fontStyle: "italic" }}>
+          {also}
+        </Text>
+      ) : null}
+    </View>
   );
 }
 
+/** What happened and why it matters: our summary, or failing that the publisher's own description. */
 function Snippet({ item, lines }: { item: NewsItem; lines: number }) {
-  if (!item.snippet) return null;
+  const text = item.summary ?? item.snippet;
+  if (!text) return null;
   return (
     <Text variant="small" numberOfLines={lines}>
-      {item.snippet}
+      {text}
     </Text>
   );
 }
@@ -149,7 +166,7 @@ export function StoryLead({ item }: { item: NewsItem }) {
 }
 
 /** A small story box: the kind, the headline and the outlet. */
-function SmallStory({ item, style, snippet = 0 }: { item: NewsItem; style?: object; snippet?: number }) {
+function SmallStory({ item, style, snippet = 0, photo = true }: { item: Story; style?: object; snippet?: number; photo?: boolean }) {
   const { colors } = useTheme();
   return (
     <Story item={item} style={[styles.small, style]}>
@@ -159,7 +176,7 @@ function SmallStory({ item, style, snippet = 0 }: { item: NewsItem; style?: obje
           <Text style={[styles.smallTitle, { color: colors.ink }]}>{cleanTitle(item.title)}</Text>
           {snippet > 0 && <Snippet item={item} lines={snippet} />}
         </View>
-        <Thumb item={item} width={64} height={64} />
+        {photo && <Thumb item={item} width={64} height={64} />}
       </View>
       <Byline item={item} />
     </Story>
@@ -171,7 +188,7 @@ export function StoryHeadlines({ items, fill = false }: { items: NewsItem[]; fil
   return (
     <View style={[{ gap: SPACE.md }, fill && { flexGrow: 1 }]}>
       {items.map((item) => (
-        <SmallStory key={item.id} item={item} style={fill ? { flexGrow: 1 } : undefined} />
+        <SmallStory key={item.id} item={item} snippet={2} style={fill ? { flexGrow: 1 } : undefined} />
       ))}
     </View>
   );
@@ -181,9 +198,11 @@ export function StoryHeadlines({ items, fill = false }: { items: NewsItem[]; fil
 export function StoryColumns({ items, snippet = 3 }: { items: NewsItem[]; snippet?: number }) {
   const [width, setWidth] = useState(0);
   const across = width >= 600;
+  // A photo only where a column is wide enough to keep the headline roomy.
+  const column = across ? (width - SPACE.md * (items.length - 1)) / items.length : width;
   return (
     <View onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)} style={across ? { flexDirection: "row", gap: SPACE.md } : { gap: SPACE.md }}>
-      {width > 0 && items.map((item) => <SmallStory key={item.id} item={item} snippet={snippet} style={across ? { flex: 1 } : undefined} />)}
+      {width > 0 && items.map((item) => <SmallStory key={item.id} item={item} snippet={snippet} photo={column >= 300} style={across ? { flex: 1 } : undefined} />)}
     </View>
   );
 }

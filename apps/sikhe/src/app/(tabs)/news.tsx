@@ -3,13 +3,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "expo-router";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
-import { BriefingCard } from "@/components/BriefingCard";
+import { BriefingCard, EditionNote } from "@/components/BriefingCard";
 import { Screen } from "@/components/Screen";
 import { StoryColumns, StoryHeadlines, StoryLead, StoryList } from "@/components/StoryCard";
 import { Text } from "@/components/Text";
 import { Chip, ErrorState, Loading, SectionHeader } from "@/components/ui";
 import { friendlyError, localDate, useNews, type NewsItem } from "@/lib/api";
-import { NEWS_SECTIONS } from "@/lib/stories";
+import { useArea } from "@/lib/area";
+import { NEWS_SECTIONS, nearSection } from "@/lib/stories";
 import { useTheme } from "@/theme/theme";
 import { FONT, SPACE, WIDE } from "@/theme/tokens";
 
@@ -51,13 +52,21 @@ function dayLabel(iso: string | null): string {
 
 /** The list under the grid. The newest-first section is split by day. */
 function River({ items, byDay }: { items: NewsItem[]; byDay: boolean }) {
-  if (!byDay) return <StoryList items={items} />;
   const groups: { day: string; items: NewsItem[] }[] = [];
-  for (const item of items) {
-    const day = dayLabel(item.publishedAt);
-    const last = groups.at(-1);
-    if (last?.day === day) last.items.push(item);
-    else groups.push({ day, items: [item] });
+  if (byDay) {
+    for (const item of items) {
+      const day = dayLabel(item.publishedAt);
+      const last = groups.at(-1);
+      if (last?.day === day) last.items.push(item);
+      else groups.push({ day, items: [item] });
+    }
+  } else {
+    // Ranked sections keep their order, split into this week and earlier, so older stories are plainly older.
+    const week = (i: NewsItem) => !i.publishedAt || Date.now() - new Date(i.publishedAt).getTime() < 7 * 86_400_000;
+    const thisWeek = items.filter(week);
+    const earlier = items.filter((i) => !week(i));
+    if (!thisWeek.length || !earlier.length) return <StoryList items={items} />;
+    groups.push({ day: "This week", items: thisWeek }, { day: "Earlier", items: earlier });
   }
   return (
     <View style={{ gap: SPACE.lg }}>
@@ -81,7 +90,10 @@ export default function NewsScreen() {
   const [shown, setShown] = useState(PAGE);
   const [refreshing, setRefreshing] = useState(false);
 
-  const section = NEWS_SECTIONS.find((s) => s.id === sectionId)!;
+  // With an area chosen, "Near you" comes right after the good news.
+  const { area } = useArea();
+  const sections = area ? [NEWS_SECTIONS[0]!, nearSection(area), ...NEWS_SECTIONS.slice(1)] : NEWS_SECTIONS;
+  const section = sections.find((s) => s.id === sectionId) ?? sections[0]!;
   // The newest-first sections keep strict order, split by day.
   const latest = sectionId === "latest" || sectionId === "panth";
   const stories = data ? section.stories(data.items) : [];
@@ -108,7 +120,7 @@ export default function NewsScreen() {
     <Screen masthead title="News" kicker="Good news from the Sikh kaum, America first" right={<MapButton />} refreshing={refreshing} onRefresh={refresh}>
       <View style={{ gap: SPACE.sm }}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -SPACE.xl + 4 }} contentContainerStyle={{ gap: SPACE.sm, paddingHorizontal: SPACE.xl - 4 }}>
-          {NEWS_SECTIONS.map((s) => (
+          {sections.map((s) => (
             <Chip
               key={s.id}
               label={s.label}
@@ -120,9 +132,13 @@ export default function NewsScreen() {
             />
           ))}
         </ScrollView>
-        <Text variant="small" color="inkSoft">
-          {section.blurb}
-        </Text>
+        {sectionId === "top" ? (
+          <EditionNote />
+        ) : (
+          <Text variant="small" color="inkSoft">
+            {section.blurb}
+          </Text>
+        )}
       </View>
 
       {isPending ? (
@@ -137,7 +153,7 @@ export default function NewsScreen() {
             <View style={wide ? styles.front : { gap: SPACE.md }}>
               <View style={wide ? styles.frontLead : undefined}>
                 <StoryLead item={lead} />
-                {belowLead.length > 0 && <StoryColumns items={belowLead} snippet={0} />}
+                {belowLead.length > 0 && <StoryColumns items={belowLead} snippet={2} />}
               </View>
               {beside.length > 0 && (
                 <View style={wide ? styles.frontSide : undefined}>

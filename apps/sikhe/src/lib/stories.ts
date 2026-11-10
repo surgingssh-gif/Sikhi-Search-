@@ -1,6 +1,7 @@
 import * as WebBrowser from "expo-web-browser";
 import { Linking, Platform } from "react-native";
 import type { NewsItem } from "./api";
+import { isNear, type Area } from "./area";
 
 /** Good or neutral news: crime, violence, accidents and feuds stay off the top. */
 export const notNegative = (i: NewsItem) => i.tone !== "negative";
@@ -26,7 +27,7 @@ const MAJOR_OUTLET =
  * America wants it, good news, a real newsroom and freshness. A day's age
  * costs a fifth of a level of appeal.
  */
-export function storyScore(i: NewsItem, now = Date.now()): number {
+export function storyScore(i: Story, now = Date.now()): number {
   const days = i.publishedAt ? Math.max(0, (now - new Date(i.publishedAt).getTime()) / 86_400_000) : 7;
   return (
     (i.appeal ?? 1) * 1.2 +
@@ -34,13 +35,14 @@ export function storyScore(i: NewsItem, now = Date.now()): number {
     (i.tone === "uplifting" ? 0.3 : 0) +
     (i.tone === "negative" ? -2 : 0) +
     (MAJOR_OUTLET.test(i.source) ? 0.4 : 0) +
-    (i.image ? 0.2 : 0) -
+    (i.image ? 0.2 : 0) +
+    coverage(i) -
     days * 0.2
   );
 }
 
 /** Best stories first. */
-export function ranked(items: NewsItem[], now = Date.now()): NewsItem[] {
+export function ranked<T extends NewsItem>(items: T[], now = Date.now()): T[] {
   return items
     .map((i) => ({ i, s: storyScore(i, now) }))
     .sort((a, b) => b.s - a.s)
@@ -50,24 +52,38 @@ export function ranked(items: NewsItem[], now = Date.now()): NewsItem[] {
 const STOP = new Set(["the", "and", "for", "with", "from", "that", "this", "into", "after", "over", "sikh", "sikhs", "makes", "becomes", "first"]);
 const wordsOf = (title: string) => new Set(title.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter((w) => w.length > 3 && !STOP.has(w)));
 
+/** A story, with the other outlets that covered the same event. */
+export type Story = NewsItem & { also?: string[] };
+
 /**
- * Drops a story when an earlier one in the list has nearly the same headline,
- * so one event covered by four outlets shows once. Keeps the first, which in a
- * ranked list is the best.
+ * One event covered by several outlets becomes one story: the first, which in
+ * a ranked list is the best, with the others' names in `also`. Stories are
+ * matched by their headlines sharing most of their words.
  */
-export function dedupe(items: NewsItem[]): NewsItem[] {
-  const kept: { item: NewsItem; words: Set<string> }[] = [];
+export function dedupe(items: NewsItem[]): Story[] {
+  const kept: { item: Story; words: Set<string> }[] = [];
   for (const item of items) {
     const words = wordsOf(item.title);
-    const same = kept.some((k) => {
+    const same = kept.find((k) => {
       let shared = 0;
       for (const w of words) if (k.words.has(w)) shared++;
       return shared >= 3 && shared / Math.min(words.size, k.words.size) >= 0.5;
     });
-    if (!same) kept.push({ item, words });
+    if (!same) {
+      kept.push({ item: { ...item }, words });
+      continue;
+    }
+    const also = (same.item.also ??= []);
+    if (item.source !== same.item.source && !also.includes(item.source)) also.push(item.source);
+    // Keep the best summary and photo the group has.
+    same.item.summary ??= item.summary;
+    same.item.image ??= item.image;
   }
   return kept.map((k) => k.item);
 }
+
+/** Stories covered by more outlets rise: wide coverage means a story matters. */
+const coverage = (i: Story) => Math.min(3, i.also?.length ?? 0) * 0.25;
 
 export const newest = (items: NewsItem[]) => [...items].sort((a, b) => (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""));
 
@@ -93,7 +109,10 @@ export interface NewsSection {
   stories: (items: NewsItem[]) => NewsItem[];
 }
 
-const ofKind = (kind: NonNullable<NewsItem["kind"]>) => (items: NewsItem[]) => dedupe(ranked(items.filter((i) => isFriendly(i) && i.kind === kind)));
+/** Groups one event's coverage, then ranks the groups, so wide coverage counts. */
+const grouped = (items: NewsItem[]) => ranked(dedupe(ranked(items)));
+
+const ofKind = (kind: NonNullable<NewsItem["kind"]>) => (items: NewsItem[]) => grouped(items.filter((i) => isFriendly(i) && i.kind === kind));
 
 /**
  * The news, by kind of good news. "Good news" leads everywhere; the harder
@@ -106,8 +125,8 @@ export const NEWS_SECTIONS: NewsSection[] = [
     blurb: "The best of today's good news from the Sikh kaum, America first.",
     stories: (items) => {
       // Notable stories first; if a quiet day has too few, the best of the rest follow.
-      const front = capPerPlace(dedupe(ranked(items.filter(isFrontPage))), 2);
-      const rest = dedupe(ranked(items.filter((i) => isGoodNews(i) && !isFrontPage(i))));
+      const front = capPerPlace(grouped(items.filter(isFrontPage)), 2);
+      const rest = grouped(items.filter((i) => isGoodNews(i) && !isFrontPage(i)));
       return front.length >= 12 ? front : [...front, ...rest];
     },
   },
@@ -125,6 +144,16 @@ export const NEWS_SECTIONS: NewsSection[] = [
     stories: (items) => dedupe(newest(items.filter(isHardNews))),
   },
 ];
+
+/** Good and community news from the reader's area, best first. */
+export function nearSection(area: Area): NewsSection {
+  return {
+    id: "near",
+    label: "Near you",
+    blurb: `Good news from Sikhs in ${area.label}: ${area.towns}.`,
+    stories: (items) => grouped(items.filter((i) => isFriendly(i) && isNear(i, area))),
+  };
+}
 
 /** Opens a story: in an in-app browser on a phone, a new tab on the web. */
 export function openStory(item: Pick<NewsItem, "url">) {

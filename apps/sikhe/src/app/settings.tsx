@@ -1,3 +1,4 @@
+import { AREAS, useArea } from "@/lib/area";
 import { useEffect, useState } from "react";
 import { Switch, View } from "react-native";
 import { Screen } from "@/components/Screen";
@@ -36,6 +37,7 @@ function Row({ title, body, value, onChange }: { title: string; body: string; va
 }
 
 export default function SettingsScreen() {
+  const { area, setArea } = useArea();
   const { appearance, setAppearance } = useTheme();
   const [prefs, setPrefs] = useState<ReminderPrefs>(DEFAULT_PREFS);
   const [denied, setDenied] = useState(false);
@@ -64,6 +66,17 @@ export default function SettingsScreen() {
           ))}
         </View>
         <Text variant="meta">Automatic follows your phone. Dark is easier on the eyes at Amritvela.</Text>
+      </Section>
+
+      <Section title="Near you">
+        <Text variant="small">Choose your area for a section of good news from your own Sangat. It is kept on this device only.</Text>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: SPACE.sm }}>
+          <Chip label="None" active={!area} onPress={() => setArea(null)} />
+          {AREAS.map((a) => (
+            <Chip key={a.id} label={a.label} active={area?.id === a.id} onPress={() => setArea(a.id)} />
+          ))}
+        </View>
+        {area && <Text variant="meta">{area.towns}</Text>}
       </Section>
 
       <Section title="Reminders">

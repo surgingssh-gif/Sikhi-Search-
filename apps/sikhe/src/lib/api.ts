@@ -109,6 +109,8 @@ export function useCalendar(date: string, days = 60) {
 }
 
 export interface Briefing {
+  /** One sentence opening today's edition. */
+  lede?: string;
   generatedAt: string;
   bullets: { text: string; itemIds: string[] }[];
 }

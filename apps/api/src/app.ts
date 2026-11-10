@@ -130,7 +130,7 @@ export function createApp({ banidb, llm, library, news, wikipedia, allowedOrigin
     if (!news || !llm) return c.json({ error: "ai_not_configured" }, 503);
     const briefing = await news.briefingToday();
     c.header("cache-control", "public, max-age=600");
-    return c.json({ generatedAt: briefing.generatedAt, bullets: briefing.bullets });
+    return c.json({ generatedAt: briefing.generatedAt, lede: briefing.lede, bullets: briefing.bullets });
   });
 
   app.get("/v1/history", (c) => {

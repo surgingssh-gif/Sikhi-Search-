@@ -3,7 +3,7 @@ import { Pressable, View } from "react-native";
 import { useBriefing, type NewsItem } from "@/lib/api";
 import { openStory } from "@/lib/stories";
 import { useTheme } from "@/theme/theme";
-import { RADIUS, SPACE } from "@/theme/tokens";
+import { FONT, RADIUS, SPACE } from "@/theme/tokens";
 import { Text } from "./Text";
 
 /**
@@ -56,6 +56,25 @@ export function BriefingCard({ items }: { items: NewsItem[] }) {
       <Text variant="meta" color="inkFaint" style={{ fontSize: 11 }}>
         Summarised by AI from today&apos;s stories. Tap a line to read the original.
       </Text>
+    </View>
+  );
+}
+
+/**
+ * Today's edition: one warm sentence from the editor's desk naming the day's
+ * best stories, written with the Briefing. Hidden when there is none.
+ */
+export function EditionNote() {
+  const { colors } = useTheme();
+  const { data } = useBriefing();
+  if (!data?.lede) return null;
+  const day = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+  return (
+    <View style={{ gap: SPACE.xs, paddingLeft: SPACE.md, borderLeftWidth: 2, borderLeftColor: colors.accent }}>
+      <Text variant="label" color="inkSoft">
+        {`Today's edition · ${day}`}
+      </Text>
+      <Text style={{ fontFamily: FONT.displayItalic, fontSize: 19, lineHeight: 27, color: colors.ink }}>{data.lede}</Text>
     </View>
   );
 }

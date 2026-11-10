@@ -156,7 +156,25 @@ describe("NewsService ratings", () => {
     const after = await service.latest();
     expect(after.items.map((i) => i.title)).toEqual(["Gurdwara holds langar", "Sikh parade draws thousands in Yuba City"]);
     expect(after.items[1]).toMatchObject({ interest: 3, tone: "uplifting", kind: "celebration", appeal: 3, rated: "model" });
-    expect(calls).toHaveLength(1);
+    expect(calls.filter((c) => c.step === "news-rating")).toHaveLength(1);
+  });
+
+  it("writes summaries for the good news once it is rated", async () => {
+    const fetch = vi.fn(async () => new Response(rss(["Gurdwara volunteers serve langar to flood victims"])));
+    const { llm } = fakeLlm({
+      "news-rating": (req) => {
+        const id = /\[(\w+)\]/.exec(String(req.messages[0]!.content))![1]!;
+        return { ratings: [{ id, interest: 3, tone: "uplifting", kind: "seva", appeal: 2, america: true, duplicateOf: null }] };
+      },
+      "news-summary": (req) => {
+        const id = /\[(\w+)\]/.exec(String(req.messages[0]!.content))![1]!;
+        return { summaries: [{ id, summary: "Volunteers from the gurdwara cooked and served langar for families who lost their homes." }] };
+      },
+    });
+    const service = new NewsService({ feeds, fetch, llm, maxPreviewFetches: 0 });
+    expect((await service.latest()).items[0]!.summary).toBeNull();
+    await service.settled();
+    expect((await service.latest()).items[0]!.summary).toMatch(/served langar/);
   });
 
   it("keeps the keyword guesses when the model fails", async () => {

@@ -261,12 +261,13 @@ describe("News routes", () => {
     tone: "neutral",
     kind: null,
     appeal: 1,
+    summary: null,
     america: false,
     rated: "guess",
   });
   const news = {
     latest: async () => ({ items: [item("a", ["panth"]), item("b", ["punjab"]), item("c", ["panth", "diaspora"])], failed: [], fetchedAt: "2026-10-25T00:00:00.000Z" }),
-    briefingToday: async () => ({ generatedAt: "2026-10-25T00:00:00.000Z", bullets: [{ text: "A story.", itemIds: ["a"] }], usage: null }),
+    briefingToday: async () => ({ generatedAt: "2026-10-25T00:00:00.000Z", bullets: [{ text: "A story.", itemIds: ["a"] }], lede: "A good day.", usage: null }),
   };
 
   it("filters by category and limits", async () => {
@@ -280,7 +281,7 @@ describe("News routes", () => {
   it("serves the briefing only when a model is configured", async () => {
     expect((await createApp({ banidb: banidbWith(async () => shabad), news }).request("/v1/news/briefing")).status).toBe(503);
     const res = await createApp({ banidb: banidbWith(async () => shabad), news, llm: stubLlm }).request("/v1/news/briefing");
-    expect(await res.json()).toMatchObject({ bullets: [{ itemIds: ["a"] }] });
+    expect(await res.json()).toMatchObject({ lede: "A good day.", bullets: [{ itemIds: ["a"] }] });
   });
 });
 

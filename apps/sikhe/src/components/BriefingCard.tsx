@@ -1,4 +1,3 @@
-import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { Pressable, View } from "react-native";
 import { useBriefing, type NewsItem } from "@/lib/api";
@@ -6,7 +5,6 @@ import { openStory } from "@/lib/stories";
 import { useTheme } from "@/theme/theme";
 import { SPACE } from "@/theme/tokens";
 import { Text } from "./Text";
-import { Card } from "./ui";
 
 /**
  * The Briefing: today's Sikh news in a few lines. Each line opens the story it
@@ -20,11 +18,10 @@ export function BriefingCard({ items }: { items: NewsItem[] }) {
   const byId = new Map(items.map((i) => [i.id, i]));
 
   return (
-    <Card featured>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: SPACE.sm }}>
-        <Ionicons name="sparkles-outline" size={16} color={colors.accentInk} />
-        <Text variant="label">The Briefing</Text>
-      </View>
+    <View style={{ gap: SPACE.md, borderTopWidth: 1, borderTopColor: colors.rule, paddingTop: SPACE.md }}>
+      <Text variant="label" accessibilityRole="header">
+        The Briefing
+      </Text>
       {isPending ? (
         <Text variant="small">Writing today&apos;s briefing…</Text>
       ) : (
@@ -59,6 +56,6 @@ export function BriefingCard({ items }: { items: NewsItem[] }) {
       <Text variant="meta" color="inkFaint" style={{ fontSize: 11 }}>
         Summarised by AI from today&apos;s stories. Tap a line to read the original.
       </Text>
-    </Card>
+    </View>
   );
 }

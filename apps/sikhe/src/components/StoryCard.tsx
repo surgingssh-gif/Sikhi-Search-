@@ -1,15 +1,15 @@
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View, type LayoutChangeEvent } from "react-native";
+import { Pressable, StyleSheet, useWindowDimensions, View, type LayoutChangeEvent } from "react-native";
 import type { NewsItem } from "@/lib/api";
 import { openStory, timeAgo } from "@/lib/stories";
 import { useTheme } from "@/theme/theme";
-import { FONT, NARROW, POSTERS, RADIUS, SPACE, type PosterColors, type PosterTone } from "@/theme/tokens";
+import { FONT, NARROW, SPACE } from "@/theme/tokens";
 import { Text } from "./Text";
 
 /**
- * News stories. Sikhe shows no news photos: they come from dozens of outlets
- * and never match. Instead the headline is the picture, set as a poster on a
- * panel coloured by its kind of good news, and the list below is plain type.
+ * News, set like a newspaper: all type, no photos or boxes. Structure comes
+ * from columns, hairlines and size: a lead story, a column of headlines beside
+ * it, a row of three, then a list with the date in the margin.
  */
 
 const KIND_LABEL: Record<NonNullable<NewsItem["kind"]>, string> = {
@@ -54,155 +54,155 @@ export function cleanTitle(title: string): string {
     .trim();
 }
 
-const byline = (item: NewsItem) => `${outletName(item.source)}${item.publishedAt ? `  ·  ${timeAgo(item.publishedAt)}` : ""}`;
+/** "Nov 5", or "3h ago" for today's. */
+const when = (item: NewsItem) => (item.publishedAt ? timeAgo(item.publishedAt) : "");
 
-/** The poster colours for a tone, in the current light or dark. */
-function usePoster(tone: PosterTone): PosterColors {
-  const { dark } = useTheme();
-  return POSTERS[dark ? "dark" : "light"][tone];
-}
-
-const toneOf = (item: NewsItem): PosterTone => item.kind ?? "community";
-
-/** The label on a poster: the kind in spaced capitals, then the place. */
-function PosterLabel({ item, colors }: { item: NewsItem; colors: PosterColors }) {
+/** The kind in small spaced capitals, then the place in grey. */
+function Kicker({ item }: { item: NewsItem }) {
+  const { colors } = useTheme();
   const place = placeOf(item);
   return (
-    <Text numberOfLines={1} style={[styles.posterLabel, { color: colors.label }]}>
-      {topicOf(item).toUpperCase()}
-      {place ? <Text style={[styles.posterPlace, { color: colors.label }]}>{`  ·  ${place}`}</Text> : null}
+    <Text numberOfLines={1} style={styles.kicker}>
+      <Text style={[styles.kickerKind, { color: colors.accentInk }]}>{topicOf(item).toUpperCase()}</Text>
+      {place ? <Text style={[styles.kickerPlace, { color: colors.inkFaint }]}>{`   ${place}`}</Text> : null}
     </Text>
   );
 }
 
-/** The lead story: a large dark poster that anchors the page. */
-function LeadPoster({ item }: { item: NewsItem }) {
-  const colors = usePoster("lead");
+function Byline({ item, time = true }: { item: NewsItem; time?: boolean }) {
+  return (
+    <Text variant="meta" color="inkFaint" numberOfLines={1}>
+      {outletName(item.source)}
+      {time && item.publishedAt ? `  ·  ${when(item)}` : ""}
+    </Text>
+  );
+}
+
+function Snippet({ item, lines }: { item: NewsItem; lines: number }) {
+  if (!item.snippet) return null;
+  return (
+    <Text variant="small" numberOfLines={lines}>
+      {item.snippet}
+    </Text>
+  );
+}
+
+/** A story you can tap: opens the publisher's page. */
+function Story({ item, style, children }: { item: NewsItem; style?: object; children: React.ReactNode }) {
+  return (
+    <Pressable onPress={() => openStory(item)} accessibilityRole="link" style={({ pressed }) => [style, { opacity: pressed ? 0.6 : 1 }]}>
+      {children}
+    </Pressable>
+  );
+}
+
+/** The lead story: the biggest headline on the page, with its summary. */
+export function StoryLead({ item }: { item: NewsItem }) {
+  const { colors } = useTheme();
   const wide = useWindowDimensions().width >= NARROW;
   return (
-    <Pressable
-      onPress={() => openStory(item)}
-      accessibilityRole="link"
-      style={({ pressed }) => [styles.lead, { backgroundColor: colors.bg, opacity: pressed ? 0.92 : 1 }, wide && styles.leadWide]}
-    >
-      <PosterLabel item={item} colors={colors} />
-      <View style={{ gap: SPACE.md, maxWidth: 760 }}>
-        <Text style={[styles.leadTitle, { color: colors.ink }, wide && { fontSize: 38, lineHeight: 44 }]}>{cleanTitle(item.title)}</Text>
-        {item.snippet ? (
-          <Text numberOfLines={3} style={[styles.leadSnippet, { color: colors.soft }]}>
-            {item.snippet}
-          </Text>
-        ) : null}
-      </View>
-      <Text numberOfLines={1} style={[styles.posterByline, { color: colors.soft }]}>
-        {byline(item)}
-      </Text>
-    </Pressable>
+    <Story item={item} style={{ gap: SPACE.sm }}>
+      <Kicker item={item} />
+      <Text style={[styles.leadTitle, { color: colors.ink }, wide && styles.leadTitleWide]}>{cleanTitle(item.title)}</Text>
+      <Snippet item={item} lines={4} />
+      <Byline item={item} />
+    </Story>
   );
 }
 
-/** A story as a poster coloured by its kind. */
-function Poster({ item, width }: { item: NewsItem; width: number }) {
-  const colors = usePoster(toneOf(item));
-  return (
-    <Pressable
-      onPress={() => openStory(item)}
-      accessibilityRole="link"
-      style={({ pressed }) => [styles.poster, { width, backgroundColor: colors.bg, opacity: pressed ? 0.9 : 1 }]}
-    >
-      <PosterLabel item={item} colors={colors} />
-      <View style={{ gap: SPACE.sm }}>
-        <Text style={[styles.posterTitle, { color: colors.ink }]}>{cleanTitle(item.title)}</Text>
-        <Text numberOfLines={1} style={[styles.posterByline, { color: colors.soft }]}>
-          {byline(item)}
-        </Text>
-      </View>
-    </Pressable>
-  );
-}
-
-/** A story in the list: plain type, the kind and place above the headline. */
-function StoryRow({ item }: { item: NewsItem }) {
-  const { colors } = useTheme();
-  const place = placeOf(item);
-  return (
-    <Pressable onPress={() => openStory(item)} accessibilityRole="link" style={({ pressed }) => [{ gap: 5, opacity: pressed ? 0.7 : 1 }]}>
-      <Text numberOfLines={1} style={styles.rowLabel}>
-        <Text style={[styles.rowKind, { color: colors.accentInk }]}>{topicOf(item).toUpperCase()}</Text>
-        {place ? <Text style={[styles.rowPlace, { color: colors.inkFaint }]}>{`   ${place}`}</Text> : null}
-      </Text>
-      <Text style={[styles.rowTitle, { color: colors.ink }]}>{cleanTitle(item.title)}</Text>
-      <Text variant="meta" color="inkFaint" numberOfLines={1}>
-        {byline(item)}
-      </Text>
-    </Pressable>
-  );
-}
-
-/** A news story: "lead" is the big dark poster at the top, "row" a story in the list. Tapping opens the publisher's page. */
-export function StoryCard({ item, variant = "row" }: { item: NewsItem; variant?: "lead" | "row" }) {
-  return variant === "lead" ? <LeadPoster item={item} /> : <StoryRow item={item} />;
-}
-
-/** Stories as posters: on a phone a row you swipe through, where there's room a grid three across. */
-export function StoryGrid({ items }: { items: NewsItem[] }) {
-  const [width, setWidth] = useState(0);
-  const phone = useWindowDimensions().width < NARROW;
-
-  if (phone) {
-    return (
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        decelerationRate="fast"
-        snapToInterval={252 + SPACE.md}
-        style={{ marginHorizontal: -SPACE.xl + 4 }}
-        contentContainerStyle={{ gap: SPACE.md, paddingHorizontal: SPACE.xl - 4 }}
-      >
-        {items.map((item) => (
-          <Poster key={item.id} item={item} width={252} />
-        ))}
-      </ScrollView>
-    );
-  }
-
-  const columns = width >= 640 ? 3 : 2;
-  const gap = SPACE.lg;
-  const tile = width ? (width - gap * (columns - 1)) / columns : 0;
-  return (
-    <View onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)} style={{ flexDirection: "row", flexWrap: "wrap", gap }}>
-      {tile > 0 && items.map((item) => <Poster key={item.id} item={item} width={tile} />)}
-    </View>
-  );
-}
-
-/** Stories as a list of plain type split by hairlines, kept to a readable width. */
-export function StoryList({ items }: { items: NewsItem[] }) {
+/** A short column of headlines, for beside the lead. */
+export function StoryHeadlines({ items }: { items: NewsItem[] }) {
   const { colors } = useTheme();
   return (
-    <View style={{ maxWidth: 760 }}>
+    <View>
       {items.map((item, n) => (
-        <View key={item.id} style={[styles.listItem, n > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line }]}>
-          <StoryRow item={item} />
-        </View>
+        <Story key={item.id} item={item} style={[styles.headline, n > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line }]}>
+          <Kicker item={item} />
+          <Text style={[styles.headlineTitle, { color: colors.ink }]}>{cleanTitle(item.title)}</Text>
+          <Byline item={item} />
+        </Story>
       ))}
     </View>
   );
 }
 
+/** Stories three across, split by hairlines like newspaper columns. Stacked on a phone. */
+export function StoryColumns({ items }: { items: NewsItem[] }) {
+  const { colors } = useTheme();
+  const [width, setWidth] = useState(0);
+  const across = width >= 600;
+  return (
+    <View onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)} style={across ? { flexDirection: "row" } : undefined}>
+      {width > 0 &&
+        items.map((item, n) => (
+          <Story
+            key={item.id}
+            item={item}
+            style={
+              across
+                ? [styles.column, n > 0 && { borderLeftWidth: StyleSheet.hairlineWidth, borderLeftColor: colors.line, paddingLeft: SPACE.xl }, n < items.length - 1 && { paddingRight: SPACE.xl }]
+                : [styles.stacked, n > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line }]
+            }
+          >
+            <Kicker item={item} />
+            <Text style={[styles.columnTitle, { color: colors.ink }]}>{cleanTitle(item.title)}</Text>
+            <Snippet item={item} lines={3} />
+            <Byline item={item} />
+          </Story>
+        ))}
+    </View>
+  );
+}
+
+/** The list: the date in the margin, then the kind, headline and outlet. On a phone the date moves under the headline. */
+export function StoryList({ items }: { items: NewsItem[] }) {
+  const { colors } = useTheme();
+  const wide = useWindowDimensions().width >= NARROW;
+  return (
+    <View style={{ maxWidth: 860 }}>
+      {items.map((item, n) => (
+        <Story key={item.id} item={item} style={[styles.river, n > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line }]}>
+          {wide && (
+            <Text variant="meta" color="inkFaint" style={styles.riverTime}>
+              {when(item)}
+            </Text>
+          )}
+          <View style={{ flex: 1, gap: 4 }}>
+            <Kicker item={item} />
+            <Text style={[styles.riverTitle, { color: colors.ink }]}>{cleanTitle(item.title)}</Text>
+            <Snippet item={item} lines={2} />
+            <Byline item={item} time={!wide} />
+          </View>
+        </Story>
+      ))}
+    </View>
+  );
+}
+
+/** One story in the list, for pages such as the map. */
+export function StoryCard({ item }: { item: NewsItem; variant?: "lead" | "row" }) {
+  const { colors } = useTheme();
+  return (
+    <Story item={item} style={{ gap: 4 }}>
+      <Kicker item={item} />
+      <Text style={[styles.riverTitle, { color: colors.ink }]}>{cleanTitle(item.title)}</Text>
+      <Byline item={item} />
+    </Story>
+  );
+}
+
 const styles = StyleSheet.create({
-  posterLabel: { fontFamily: FONT.sansBold, fontSize: 10.5, lineHeight: 14, letterSpacing: 1.1 },
-  posterPlace: { fontFamily: FONT.sansMedium, fontSize: 10.5, lineHeight: 14, letterSpacing: 0.3 },
-  posterByline: { fontFamily: FONT.sansMedium, fontSize: 11.5, lineHeight: 16 },
-  lead: { borderRadius: RADIUS.lg, padding: SPACE.xl, minHeight: 300, justifyContent: "space-between", gap: SPACE.xl },
-  leadWide: { padding: SPACE.xxl + 8, minHeight: 340 },
-  leadTitle: { fontFamily: FONT.headline, fontSize: 30, lineHeight: 36, letterSpacing: -0.3 },
-  leadSnippet: { fontFamily: FONT.serif, fontSize: 15, lineHeight: 22 },
-  poster: { borderRadius: RADIUS.lg, padding: SPACE.lg + 2, minHeight: 210, justifyContent: "space-between", gap: SPACE.xl },
-  posterTitle: { fontFamily: FONT.headline, fontSize: 19, lineHeight: 24, letterSpacing: -0.1 },
-  rowLabel: { lineHeight: 14 },
-  rowKind: { fontFamily: FONT.sansBold, fontSize: 10, lineHeight: 14, letterSpacing: 1 },
-  rowPlace: { fontFamily: FONT.sans, fontSize: 11, lineHeight: 14 },
-  rowTitle: { fontFamily: FONT.headline, fontSize: 18, lineHeight: 24 },
-  listItem: { paddingVertical: SPACE.lg + 2 },
+  kicker: { lineHeight: 14 },
+  kickerKind: { fontFamily: FONT.sansBold, fontSize: 10, lineHeight: 14, letterSpacing: 1 },
+  kickerPlace: { fontFamily: FONT.sans, fontSize: 11, lineHeight: 14 },
+  leadTitle: { fontFamily: FONT.display, fontSize: 28, lineHeight: 33, letterSpacing: -0.3 },
+  leadTitleWide: { fontSize: 36, lineHeight: 41 },
+  headline: { gap: 4, paddingVertical: SPACE.md + 2 },
+  headlineTitle: { fontFamily: FONT.headline, fontSize: 16, lineHeight: 21 },
+  column: { flex: 1, gap: 6 },
+  stacked: { gap: 6, paddingVertical: SPACE.lg },
+  columnTitle: { fontFamily: FONT.headline, fontSize: 18, lineHeight: 23 },
+  river: { flexDirection: "row", gap: SPACE.lg, paddingVertical: SPACE.lg },
+  riverTime: { width: 64, paddingTop: 1, fontFamily: FONT.sansMedium },
+  riverTitle: { fontFamily: FONT.headline, fontSize: 17, lineHeight: 23 },
 });

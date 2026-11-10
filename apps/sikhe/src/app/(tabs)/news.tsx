@@ -2,21 +2,22 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "expo-router";
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from "react-native";
 import { BriefingCard } from "@/components/BriefingCard";
 import { Screen } from "@/components/Screen";
-import { StoryCard, StoryGrid, StoryList } from "@/components/StoryCard";
+import { StoryColumns, StoryHeadlines, StoryLead, StoryList } from "@/components/StoryCard";
 import { Text } from "@/components/Text";
 import { Chip, ErrorState, Loading, SectionHeader } from "@/components/ui";
 import { friendlyError, localDate, useNews, type NewsItem } from "@/lib/api";
 import { NEWS_SECTIONS } from "@/lib/stories";
 import { useTheme } from "@/theme/theme";
-import { FONT, SPACE } from "@/theme/tokens";
+import { FONT, SPACE, WIDE } from "@/theme/tokens";
 
 /** How many stories the list shows before "Show more", and how many more each tap. */
 const PAGE = 15;
-/** Picture cards under the lead story. */
-const GRID = 6;
+/** Headlines beside the lead, and stories in the row of three under it. */
+const BESIDE = 4;
+const ACROSS = 3;
 
 function MapButton() {
   const { colors } = useTheme();
@@ -84,13 +85,17 @@ export default function NewsScreen() {
   // The newest-first sections keep strict order, split by day.
   const latest = sectionId === "latest" || sectionId === "panth";
   const stories = data ? section.stories(data.items) : [];
-  // The best story leads as a poster; the newest-first sections keep strict order.
+  // The front: the best story leads, a column of headlines beside it, a row of three under it.
+  // The newest-first sections are just the list.
+  // On wide screens two more stories sit under the lead, so its column is as full as the one beside it.
+  const wide = useWindowDimensions().width >= WIDE;
+  const under = wide ? 2 : 0;
   const lead = latest ? undefined : stories[0];
-  const others = stories.filter((i) => i !== lead);
-  // The next few become posters; the rest go in the list.
-  const grid = latest ? [] : others.slice(0, GRID);
-  const inGrid = new Set(grid.map((i) => i.id));
-  const river = others.filter((i) => !inGrid.has(i.id));
+  const beside = latest ? [] : stories.slice(1, 1 + BESIDE);
+  const belowLead = latest ? [] : stories.slice(1 + BESIDE, 1 + BESIDE + under);
+  const acrossStart = 1 + BESIDE + under;
+  const across = latest ? [] : stories.slice(acrossStart, acrossStart + ACROSS);
+  const river = latest ? stories : stories.slice(acrossStart + ACROSS);
 
   const refresh = async () => {
     setRefreshing(true);
@@ -128,9 +133,27 @@ export default function NewsScreen() {
         <Text variant="small">No stories in this section right now.</Text>
       ) : (
         <>
-          {lead && <StoryCard item={lead} variant="lead" />}
-          {grid.length > 0 && (
-            <StoryGrid items={grid} />
+          {lead && (
+            <View style={wide ? styles.front : { gap: SPACE.md }}>
+              <View style={wide ? styles.frontLead : undefined}>
+                <StoryLead item={lead} />
+                {belowLead.length > 0 && (
+                  <View style={{ marginTop: SPACE.xl, paddingTop: SPACE.lg, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line }}>
+                    <StoryColumns items={belowLead} />
+                  </View>
+                )}
+              </View>
+              {beside.length > 0 && (
+                <View style={wide ? [styles.frontSide, { borderLeftColor: colors.line }] : { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line }}>
+                  <StoryHeadlines items={beside} />
+                </View>
+              )}
+            </View>
+          )}
+          {across.length > 0 && (
+            <View style={{ borderTopWidth: 1, borderTopColor: colors.rule, paddingTop: SPACE.lg }}>
+              <StoryColumns items={across} />
+            </View>
           )}
           {sectionId === "top" && <BriefingCard items={data.items} />}
           {river.length > 0 && (
@@ -158,5 +181,8 @@ export default function NewsScreen() {
 const styles = StyleSheet.create({
   mapButton: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, height: 32, borderRadius: 999, borderWidth: 1 },
   pillText: { fontFamily: FONT.sansBold, fontSize: 11, letterSpacing: 0.7, textTransform: "uppercase" },
+  front: { flexDirection: "row", alignItems: "flex-start" },
+  frontLead: { flex: 2, paddingRight: SPACE.xxl },
+  frontSide: { flex: 1, paddingLeft: SPACE.xl, borderLeftWidth: StyleSheet.hairlineWidth, marginTop: -SPACE.md },
   more: { alignSelf: "center", marginTop: SPACE.lg, paddingHorizontal: 20, paddingVertical: 11, borderRadius: 999, borderWidth: 1 },
 });

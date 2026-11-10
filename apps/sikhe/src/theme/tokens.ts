@@ -96,39 +96,3 @@ export const WIDE = 980;
 /** Below this width the masthead stacks and its sections scroll sideways. */
 export const NARROW = 680;
 
-/**
- * Story posters. Sikhe shows no news photos: the headline itself is the
- * picture, set on a panel coloured by the kind of good news. A small, muted
- * set that sits calmly on the warm paper. Each has its panel, its label colour
- * and its headline colour, for light and dark.
- */
-export interface PosterColors {
-  bg: string;
-  label: string;
-  ink: string;
-  /** Bylines and summaries on the panel. */
-  soft: string;
-}
-
-export type PosterTone = "lead" | "achievement" | "seva" | "celebration" | "heritage" | "youth" | "community";
-
-export const POSTERS: Record<"light" | "dark", Record<PosterTone, PosterColors>> = {
-  light: {
-    lead: { bg: "#2C2C2A", label: "#FAC775", ink: "#F6F4EE", soft: "#B4B2A9" },
-    achievement: { bg: "#E6F1FB", label: "#185FA5", ink: "#042C53", soft: "#3D5F80" },
-    seva: { bg: "#FAEEDA", label: "#854F0B", ink: "#412402", soft: "#7A5A2E" },
-    celebration: { bg: "#FAECE7", label: "#993C1D", ink: "#4A1B0C", soft: "#7E4A38" },
-    heritage: { bg: "#E1F5EE", label: "#0F6E56", ink: "#04342C", soft: "#3A6658" },
-    youth: { bg: "#EAF3DE", label: "#3B6D11", ink: "#173404", soft: "#4C6634" },
-    community: { bg: "#F1EFE8", label: "#5F5E5A", ink: "#2C2C2A", soft: "#6B6A66" },
-  },
-  dark: {
-    lead: { bg: "#F2F1EC", label: "#854F0B", ink: "#161615", soft: "#5F5E5A" },
-    achievement: { bg: "#0C447C", label: "#B5D4F4", ink: "#E6F1FB", soft: "#9DBBD8" },
-    seva: { bg: "#633806", label: "#FAC775", ink: "#FAEEDA", soft: "#D9BE94" },
-    celebration: { bg: "#712B13", label: "#F5C4B3", ink: "#FAECE7", soft: "#D8AE9F" },
-    heritage: { bg: "#085041", label: "#9FE1CB", ink: "#E1F5EE", soft: "#A3C9BC" },
-    youth: { bg: "#27500A", label: "#C0DD97", ink: "#EAF3DE", soft: "#AFC496" },
-    community: { bg: "#444441", label: "#D3D1C7", ink: "#F1EFE8", soft: "#B4B2A9" },
-  },
-};

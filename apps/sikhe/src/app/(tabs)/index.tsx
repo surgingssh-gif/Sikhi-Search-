@@ -7,7 +7,7 @@ import { CalendarEventRow } from "@/components/CalendarEventRow";
 import { EventRow } from "@/components/History";
 import { HukamnamaCard } from "@/components/HukamnamaCard";
 import { Screen } from "@/components/Screen";
-import { StoryCard, StoryGrid, StoryList } from "@/components/StoryCard";
+import { StoryColumns, StoryLead, StoryList } from "@/components/StoryCard";
 import { Text } from "@/components/Text";
 import { Button, Card, Divider, ErrorState, Loading, Section } from "@/components/ui";
 import { friendlyError, localDate, useCalendar, useHistoryAround, useNews } from "@/lib/api";
@@ -47,17 +47,23 @@ function TopStories({ wide }: { wide: boolean }) {
   const stories = NEWS_SECTIONS[0]!.stories(data.items).filter((i) => i.language === "en");
   const lead = stories[0];
   if (!lead) return <Text variant="small">No stories right now.</Text>;
-  const others = stories.filter((i) => i !== lead);
-  // The next few become posters; the rest go in the list.
-  const grid = others.slice(0, wide ? 3 : 5);
-  const inGrid = new Set(grid.map((i) => i.id));
-  const list = others.filter((i) => !inGrid.has(i.id)).slice(0, wide ? 6 : 4);
+  // Under the lead, a row of three; then the Briefing and a short list.
+  const across = stories.slice(1, 4);
+  const list = stories.slice(4, wide ? 10 : 8);
   return (
     <View style={{ gap: SPACE.xl }}>
-      <StoryCard item={lead} variant="lead" />
-      {grid.length > 0 && <StoryGrid items={grid} />}
+      <StoryLead item={lead} />
+      {across.length > 0 && (
+        <View style={{ borderTopWidth: 1, borderTopColor: colors.rule, paddingTop: SPACE.lg }}>
+          <StoryColumns items={across} />
+        </View>
+      )}
       <BriefingCard items={data.items} />
-      <StoryList items={list} />
+      {list.length > 0 && (
+        <View style={{ borderTopWidth: 1, borderTopColor: colors.rule }}>
+          <StoryList items={list} />
+        </View>
+      )}
       <View style={{ alignItems: "center" }}>
         <Button label="More good news" kind="quiet" icon="newspaper-outline" onPress={() => router.navigate("/news")} />
       </View>

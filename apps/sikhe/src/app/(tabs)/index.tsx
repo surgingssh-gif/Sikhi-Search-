@@ -1,4 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
+import { router } from "expo-router";
 import { useState } from "react";
 import { StyleSheet, useWindowDimensions, View } from "react-native";
 import { BriefingCard } from "@/components/BriefingCard";
@@ -6,9 +7,9 @@ import { CalendarEventRow } from "@/components/CalendarEventRow";
 import { EventRow } from "@/components/History";
 import { HukamnamaCard } from "@/components/HukamnamaCard";
 import { Screen } from "@/components/Screen";
-import { StoryCard } from "@/components/StoryCard";
+import { StoryCard, StoryGrid, StoryList } from "@/components/StoryCard";
 import { Text } from "@/components/Text";
-import { Card, Divider, ErrorState, Loading, Section } from "@/components/ui";
+import { Button, Card, Divider, ErrorState, Loading, Section } from "@/components/ui";
 import { friendlyError, localDate, useCalendar, useHistoryAround, useNews } from "@/lib/api";
 import { whenLabel } from "@/lib/calendar";
 import { anniversaryLabel } from "@/lib/history";
@@ -37,25 +38,30 @@ function SikhCalendar({ today }: { today: string }) {
   );
 }
 
-/** The front page's news: the lead story, the Briefing, then the top stories. */
-function TopStories({ count }: { count: number }) {
+/** The front page's news: the lead story, picture cards, the Briefing, then a short list. */
+function TopStories({ wide }: { wide: boolean }) {
+  const { colors } = useTheme();
   const { data, error, isPending, refetch } = useNews();
   if (isPending) return <Loading label="Gathering the news…" />;
   if (error) return <ErrorState message={friendlyError(error)} onRetry={() => refetch()} />;
   const stories = NEWS_SECTIONS[0]!.stories(data.items).filter((i) => i.language === "en");
   const lead = stories.find((i) => i.image) ?? stories[0];
-  const rest = stories.filter((i) => i !== lead).slice(0, count);
   if (!lead) return <Text variant="small">No stories right now.</Text>;
+  const others = stories.filter((i) => i !== lead);
+  const grid = [...others.filter((i) => i.image), ...others.filter((i) => !i.image)].slice(0, wide ? 3 : 4);
+  const inGrid = new Set(grid.map((i) => i.id));
+  const list = others.filter((i) => !inGrid.has(i.id)).slice(0, wide ? 6 : 4);
   return (
-    <View style={{ gap: SPACE.lg }}>
+    <View style={{ gap: SPACE.xl }}>
       <StoryCard item={lead} variant="lead" />
+      <View style={{ paddingTop: SPACE.lg, borderTopWidth: 1, borderTopColor: colors.line }}>
+        <StoryGrid items={grid} />
+      </View>
       <BriefingCard items={data.items} />
-      {rest.map((item) => (
-        <View key={item.id} style={{ gap: SPACE.lg }}>
-          <Divider />
-          <StoryCard item={item} />
-        </View>
-      ))}
+      <StoryList items={list} />
+      <View style={{ alignItems: "center" }}>
+        <Button label="All the news" kind="quiet" icon="newspaper-outline" onPress={() => router.navigate("/news")} />
+      </View>
     </View>
   );
 }
@@ -97,7 +103,7 @@ export default function TodayScreen() {
       <View style={wide ? styles.front : { gap: SPACE.xl }}>
         <View style={wide ? styles.lead : { gap: SPACE.xl }}>
           <Section title="Top stories" href="/news" more="All news">
-            <TopStories count={wide ? 10 : 7} />
+            <TopStories wide={wide} />
           </Section>
         </View>
         <View style={wide ? [styles.rail, { borderLeftColor: colors.line }] : { gap: SPACE.xl }}>

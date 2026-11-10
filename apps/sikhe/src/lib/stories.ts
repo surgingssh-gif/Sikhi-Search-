@@ -55,31 +55,56 @@ const wordsOf = (title: string) => new Set(title.toLowerCase().replace(/[^a-z0-9
 /** A story, with the other outlets that covered the same event. */
 export type Story = NewsItem & { also?: string[] };
 
+/** Aggregators and rewrite sites: fine to mention, but the paper that reported the story should lead. */
+const AGGREGATOR = /\b(inshorts|msn|yahoo|newsbreak|dailyhunt|latestly|babushahi|zee|news18|india tv|ommcom|devdiscourse)\b/i;
+
+/** Which outlet's version of a story to show: a real newsroom, then one with a summary and a photo. */
+function sourceRank(i: NewsItem): number {
+  return (MAJOR_OUTLET.test(i.source) ? 2 : 0) - (AGGREGATOR.test(i.source) ? 2 : 0) + (i.summary ? 0.5 : 0) + (i.image ? 0.5 : 0);
+}
+
 /**
- * One event covered by several outlets becomes one story: the first, which in
- * a ranked list is the best, with the others' names in `also`. Stories are
- * matched by their headlines sharing most of their words.
+ * One event covered by several outlets becomes one story, shown from the
+ * best outlet, with the others' names in `also`. Stories are the same event
+ * when the model gave them the same event slug, or their headlines share
+ * most of their words. The group keeps the place of its highest-ranked story.
  */
 export function dedupe(items: NewsItem[]): Story[] {
-  const kept: { item: Story; words: Set<string> }[] = [];
+  const groups: { members: NewsItem[]; words: Set<string>[]; events: Set<string> }[] = [];
   for (const item of items) {
     const words = wordsOf(item.title);
-    const same = kept.find((k) => {
-      let shared = 0;
-      for (const w of words) if (k.words.has(w)) shared++;
-      return shared >= 3 && shared / Math.min(words.size, k.words.size) >= 0.5;
-    });
-    if (!same) {
-      kept.push({ item: { ...item }, words });
-      continue;
+    const group = groups.find(
+      (g) =>
+        (item.event && g.events.has(item.event)) ||
+        g.words.some((w) => {
+          let shared = 0;
+          for (const x of words) if (w.has(x)) shared++;
+          return shared >= 3 && shared / Math.min(words.size, w.size) >= 0.5;
+        }),
+    );
+    if (group) {
+      group.members.push(item);
+      group.words.push(words);
+      if (item.event) group.events.add(item.event);
+    } else {
+      groups.push({ members: [item], words: [words], events: new Set(item.event ? [item.event] : []) });
     }
-    const also = (same.item.also ??= []);
-    if (item.source !== same.item.source && !also.includes(item.source)) also.push(item.source);
-    // Keep the best summary and photo the group has.
-    same.item.summary ??= item.summary;
-    same.item.image ??= item.image;
   }
-  return kept.map((k) => k.item);
+  return groups.map(({ members }) => {
+    const best = [...members].sort((a, b) => sourceRank(b) - sourceRank(a))[0]!;
+    const others = members.filter((m) => m !== best);
+    const story: Story = {
+      ...best,
+      // The group's strongest rating, and its summary and photo if the shown outlet lacks them.
+      appeal: Math.max(...members.map((m) => m.appeal ?? 1)),
+      interest: Math.max(...members.map((m) => m.interest)),
+      summary: best.summary ?? others.find((m) => m.summary)?.summary ?? null,
+      image: best.image ?? others.find((m) => m.image)?.image ?? null,
+    };
+    const also = [...new Set(others.map((m) => m.source).filter((s) => s !== best.source))];
+    if (also.length) story.also = also;
+    return story;
+  });
 }
 
 /** Stories covered by more outlets rise: wide coverage means a story matters. */

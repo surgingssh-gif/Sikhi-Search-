@@ -2,7 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Link, router } from "expo-router";
 import { useState } from "react";
 import { Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
-import { BriefingCard, EditionNote } from "@/components/BriefingCard";
+import { EditionNote } from "@/components/BriefingCard";
 import { CalendarEventRow } from "@/components/CalendarEventRow";
 import { EventRow } from "@/components/History";
 import { HukamnamaCard } from "@/components/HukamnamaCard";
@@ -56,7 +56,6 @@ function TopStories({ wide }: { wide: boolean }) {
       <EditionNote />
       <StoryLead item={lead} />
       {across.length > 0 && <StoryColumns items={across} />}
-      <BriefingCard items={data.items} />
       {list.length > 0 && <StoryList items={list} />}
       <View style={{ alignItems: "center" }}>
         <Button label="More good news" kind="quiet" icon="newspaper-outline" onPress={() => router.navigate("/news")} />

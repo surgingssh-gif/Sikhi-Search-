@@ -168,13 +168,14 @@ describe("NewsService ratings", () => {
       },
       "news-summary": (req) => {
         const id = /\[(\w+)\]/.exec(String(req.messages[0]!.content))![1]!;
-        return { summaries: [{ id, summary: "Volunteers from the gurdwara cooked and served langar for families who lost their homes." }] };
+        return { summaries: [{ id, summary: "Volunteers from the gurdwara cooked and served langar for families who lost their homes.", event: "Gurdwara Flood Langar" }] };
       },
     });
     const service = new NewsService({ feeds, fetch, llm, maxPreviewFetches: 0 });
     expect((await service.latest()).items[0]!.summary).toBeNull();
     await service.settled();
     expect((await service.latest()).items[0]!.summary).toMatch(/served langar/);
+    expect((await service.latest()).items[0]!.event).toBe("gurdwara-flood-langar");
   });
 
   it("keeps the keyword guesses when the model fails", async () => {

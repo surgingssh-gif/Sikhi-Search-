@@ -39,7 +39,7 @@ export function kickerOf(item: NewsItem): string {
 
 /** An outlet's name as a reader would say it: "www.babushahi.com" becomes "Babushahi". */
 export function outletName(source: string): string {
-  const s = source.trim();
+  const s = tidy(source);
   if (!/^(www\.)?[\w-]+(\.[\w-]+)+$/i.test(s)) return s;
   const name = s
     .replace(/^www\./i, "")
@@ -47,6 +47,9 @@ export function outletName(source: string): string {
     .replace(/\.(com|co)$/i, "");
   return name.charAt(0).toUpperCase() + name.slice(1);
 }
+
+/** "The Nation (Pakistan )" becomes "The Nation (Pakistan)". */
+const tidy = (name: string) => name.replace(/\(\s+/g, "(").replace(/\s+\)/g, ")").replace(/\s{2,}/g, " ").trim();
 
 /** A headline without the section tag some outlets add: "… a year | Trending" becomes "… a year". */
 export function cleanTitle(title: string): string {
@@ -156,7 +159,7 @@ export function StoryLead({ item }: { item: NewsItem }) {
         <View style={{ flex: 1, gap: SPACE.sm }}>
           <Kicker item={item} />
           <Text style={[styles.leadTitle, { color: colors.ink }, wide && styles.leadTitleWide]}>{cleanTitle(item.title)}</Text>
-          <Snippet item={item} lines={3} />
+          <Snippet item={item} lines={5} />
         </View>
         {wide ? <Thumb item={item} width={168} height={112} /> : <Thumb item={item} width={84} height={84} />}
       </View>
@@ -188,14 +191,14 @@ export function StoryHeadlines({ items, fill = false }: { items: NewsItem[]; fil
   return (
     <View style={[{ gap: SPACE.md }, fill && { flexGrow: 1 }]}>
       {items.map((item) => (
-        <SmallStory key={item.id} item={item} snippet={2} style={fill ? { flexGrow: 1 } : undefined} />
+        <SmallStory key={item.id} item={item} snippet={3} style={fill ? { flexGrow: 1 } : undefined} />
       ))}
     </View>
   );
 }
 
 /** Story boxes side by side, all one height; stacked on a phone. */
-export function StoryColumns({ items, snippet = 3 }: { items: NewsItem[]; snippet?: number }) {
+export function StoryColumns({ items, snippet = 4 }: { items: NewsItem[]; snippet?: number }) {
   const [width, setWidth] = useState(0);
   const across = width >= 600;
   // A photo only where a column is wide enough to keep the headline roomy.
@@ -214,7 +217,7 @@ export function StoryList({ items }: { items: NewsItem[] }) {
   const tile = two ? (width - SPACE.md) / 2 : width;
   return (
     <View onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)} style={{ flexDirection: "row", flexWrap: "wrap", gap: SPACE.md }}>
-      {width > 0 && items.map((item) => <SmallStory key={item.id} item={item} snippet={2} style={{ width: tile }} />)}
+      {width > 0 && items.map((item) => <SmallStory key={item.id} item={item} snippet={3} style={{ width: tile }} />)}
     </View>
   );
 }
@@ -231,7 +234,7 @@ const styles = StyleSheet.create({
   box: { borderWidth: 1, borderRadius: RADIUS.md },
   withThumb: { flexDirection: "row", gap: SPACE.lg, alignItems: "flex-start" },
   lead: { padding: SPACE.lg + 2, gap: SPACE.md, justifyContent: "space-between" },
-  leadWide: { padding: SPACE.xl, flexGrow: 1 },
+  leadWide: { padding: SPACE.xl },
   leadTitle: { fontFamily: FONT.display, fontSize: 23, lineHeight: 28, letterSpacing: -0.2 },
   leadTitleWide: { fontSize: 28, lineHeight: 33 },
   small: { padding: SPACE.lg, gap: SPACE.md, justifyContent: "space-between" },

@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { JsonLlm, LlmUsage } from "../ai/llm";
 import { placeFor, type PlaceRegion } from "./places";
 import { guessRating, rateHeadlines, type GoodNewsKind, type ModelRating, type StoryTone } from "./rating";
-import { summarizeStories } from "./summary";
+import { summarizeStories, type StorySummary } from "./summary";
 
 /**
  * Sikh and Punjab news from publishers' own RSS feeds. We show headlines,
@@ -52,6 +52,8 @@ export interface NewsItem {
   appeal: number;
   /** One or two sentences on what happened and why it matters, written from the publisher's own description. */
   summary: string | null;
+  /** Stories about the same event share this slug, written with the summary. */
+  event: string | null;
   /** The story happens in the United States. */
   america: boolean;
   /** Whether interest and tone come from the model or a keyword guess. */
@@ -181,6 +183,7 @@ export function parseFeed(xml: string, feed: NewsFeed): NewsItem[] {
       categories: [...categories],
       image: feed.aggregator ? null : imageFrom(it),
       summary: null,
+      event: null,
       place,
       ...rating,
       rated: "guess",
@@ -370,10 +373,13 @@ export class NewsService {
   }
 
   /** Summaries written so far, per story id. */
-  private readonly summaries = new Map<string, string>();
+  private readonly summaries = new Map<string, StorySummary>();
 
   private applySummaries(items: NewsItem[]): void {
-    for (const item of items) item.summary = this.summaries.get(item.id) ?? item.summary;
+    for (const item of items) {
+      const s = this.summaries.get(item.id);
+      if (s) Object.assign(item, { summary: s.summary, event: s.event || null });
+    }
   }
 
   /** Writes summaries for good and community news that doesn't have one yet, best first. */

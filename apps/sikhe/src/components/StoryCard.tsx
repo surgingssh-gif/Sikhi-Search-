@@ -3,13 +3,13 @@ import { Pressable, StyleSheet, useWindowDimensions, View, type LayoutChangeEven
 import type { NewsItem } from "@/lib/api";
 import { openStory, timeAgo } from "@/lib/stories";
 import { useTheme } from "@/theme/theme";
-import { FONT, NARROW, SPACE } from "@/theme/tokens";
+import { FONT, NARROW, RADIUS, SPACE } from "@/theme/tokens";
 import { Text } from "./Text";
 
 /**
- * News, set like a newspaper: all type, no photos or boxes. Structure comes
- * from columns, hairlines and size: a lead story, a column of headlines beside
- * it, a row of three, then a list with the date in the margin.
+ * News, set like a newspaper in type, no photos. Each story sits in its own
+ * box: a hairline border on the paper, slightly rounded, darker on hover.
+ * Boxes in a row share one height, so the page reads as a tidy grid.
  */
 
 const KIND_LABEL: Record<NonNullable<NewsItem["kind"]>, string> = {
@@ -87,122 +87,106 @@ function Snippet({ item, lines }: { item: NewsItem; lines: number }) {
   );
 }
 
-/** A story you can tap: opens the publisher's page. */
+/** A story in its box. Tapping opens the publisher's page. */
 function Story({ item, style, children }: { item: NewsItem; style?: object; children: React.ReactNode }) {
+  const { colors } = useTheme();
   return (
-    <Pressable onPress={() => openStory(item)} accessibilityRole="link" style={({ pressed }) => [style, { opacity: pressed ? 0.6 : 1 }]}>
+    <Pressable
+      onPress={() => openStory(item)}
+      accessibilityRole="link"
+      style={(state) => {
+        const hovered = (state as { hovered?: boolean }).hovered;
+        return [
+          styles.box,
+          { backgroundColor: colors.surface, borderColor: hovered ? colors.inkSoft : colors.line, opacity: state.pressed ? 0.85 : 1 },
+          style,
+        ];
+      }}
+    >
       {children}
     </Pressable>
   );
 }
 
-/** The lead story: the biggest headline on the page, with its summary. */
+/** The lead story: the biggest headline on the page, with its summary. Grows to fill its column. */
 export function StoryLead({ item }: { item: NewsItem }) {
   const { colors } = useTheme();
   const wide = useWindowDimensions().width >= NARROW;
   return (
-    <Story item={item} style={{ gap: SPACE.sm }}>
+    <Story item={item} style={[styles.lead, wide && styles.leadWide]}>
       <Kicker item={item} />
-      <Text style={[styles.leadTitle, { color: colors.ink }, wide && styles.leadTitleWide]}>{cleanTitle(item.title)}</Text>
-      <Snippet item={item} lines={4} />
+      <View style={{ gap: SPACE.md }}>
+        <Text style={[styles.leadTitle, { color: colors.ink }, wide && styles.leadTitleWide]}>{cleanTitle(item.title)}</Text>
+        <Snippet item={item} lines={4} />
+      </View>
       <Byline item={item} />
     </Story>
   );
 }
 
-/** A short column of headlines, for beside the lead. */
-export function StoryHeadlines({ items }: { items: NewsItem[] }) {
+/** A small story box: the kind, the headline and the outlet. */
+function SmallStory({ item, style, snippet = 0 }: { item: NewsItem; style?: object; snippet?: number }) {
   const { colors } = useTheme();
   return (
-    <View>
-      {items.map((item, n) => (
-        <Story key={item.id} item={item} style={[styles.headline, n > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line }]}>
-          <Kicker item={item} />
-          <Text style={[styles.headlineTitle, { color: colors.ink }]}>{cleanTitle(item.title)}</Text>
-          <Byline item={item} />
-        </Story>
+    <Story item={item} style={[styles.small, style]}>
+      <View style={{ gap: 6 }}>
+        <Kicker item={item} />
+        <Text style={[styles.smallTitle, { color: colors.ink }]}>{cleanTitle(item.title)}</Text>
+        {snippet > 0 && <Snippet item={item} lines={snippet} />}
+      </View>
+      <Byline item={item} />
+    </Story>
+  );
+}
+
+/** A column of story boxes, for beside the lead. They share the column's height. */
+export function StoryHeadlines({ items, fill = false }: { items: NewsItem[]; fill?: boolean }) {
+  return (
+    <View style={[{ gap: SPACE.md }, fill && { flexGrow: 1 }]}>
+      {items.map((item) => (
+        <SmallStory key={item.id} item={item} style={fill ? { flexGrow: 1 } : undefined} />
       ))}
     </View>
   );
 }
 
-/** Stories three across, split by hairlines like newspaper columns. Stacked on a phone. */
-export function StoryColumns({ items }: { items: NewsItem[] }) {
-  const { colors } = useTheme();
+/** Story boxes side by side, all one height; stacked on a phone. */
+export function StoryColumns({ items, snippet = 3 }: { items: NewsItem[]; snippet?: number }) {
   const [width, setWidth] = useState(0);
   const across = width >= 600;
   return (
-    <View onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)} style={across ? { flexDirection: "row" } : undefined}>
-      {width > 0 &&
-        items.map((item, n) => (
-          <Story
-            key={item.id}
-            item={item}
-            style={
-              across
-                ? [styles.column, n > 0 && { borderLeftWidth: StyleSheet.hairlineWidth, borderLeftColor: colors.line, paddingLeft: SPACE.xl }, n < items.length - 1 && { paddingRight: SPACE.xl }]
-                : [styles.stacked, n > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line }]
-            }
-          >
-            <Kicker item={item} />
-            <Text style={[styles.columnTitle, { color: colors.ink }]}>{cleanTitle(item.title)}</Text>
-            <Snippet item={item} lines={3} />
-            <Byline item={item} />
-          </Story>
-        ))}
+    <View onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)} style={across ? { flexDirection: "row", gap: SPACE.md } : { gap: SPACE.md }}>
+      {width > 0 && items.map((item) => <SmallStory key={item.id} item={item} snippet={snippet} style={across ? { flex: 1 } : undefined} />)}
     </View>
   );
 }
 
-/** The list: the date in the margin, then the kind, headline and outlet. On a phone the date moves under the headline. */
+/** The list: story boxes two across where there's room, one column on a phone. */
 export function StoryList({ items }: { items: NewsItem[] }) {
-  const { colors } = useTheme();
-  const wide = useWindowDimensions().width >= NARROW;
+  const [width, setWidth] = useState(0);
+  const two = width >= 640;
+  const tile = two ? (width - SPACE.md) / 2 : width;
   return (
-    <View style={{ maxWidth: 860 }}>
-      {items.map((item, n) => (
-        <Story key={item.id} item={item} style={[styles.river, n > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line }]}>
-          {wide && (
-            <Text variant="meta" color="inkFaint" style={styles.riverTime}>
-              {when(item)}
-            </Text>
-          )}
-          <View style={{ flex: 1, gap: 4 }}>
-            <Kicker item={item} />
-            <Text style={[styles.riverTitle, { color: colors.ink }]}>{cleanTitle(item.title)}</Text>
-            <Snippet item={item} lines={2} />
-            <Byline item={item} time={!wide} />
-          </View>
-        </Story>
-      ))}
+    <View onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)} style={{ flexDirection: "row", flexWrap: "wrap", gap: SPACE.md }}>
+      {width > 0 && items.map((item) => <SmallStory key={item.id} item={item} snippet={2} style={{ width: tile }} />)}
     </View>
   );
 }
 
-/** One story in the list, for pages such as the map. */
+/** One story, for pages such as the map. */
 export function StoryCard({ item }: { item: NewsItem; variant?: "lead" | "row" }) {
-  const { colors } = useTheme();
-  return (
-    <Story item={item} style={{ gap: 4 }}>
-      <Kicker item={item} />
-      <Text style={[styles.riverTitle, { color: colors.ink }]}>{cleanTitle(item.title)}</Text>
-      <Byline item={item} />
-    </Story>
-  );
+  return <SmallStory item={item} />;
 }
 
 const styles = StyleSheet.create({
   kicker: { lineHeight: 14 },
   kickerKind: { fontFamily: FONT.sansBold, fontSize: 10, lineHeight: 14, letterSpacing: 1 },
   kickerPlace: { fontFamily: FONT.sans, fontSize: 11, lineHeight: 14 },
-  leadTitle: { fontFamily: FONT.display, fontSize: 28, lineHeight: 33, letterSpacing: -0.3 },
+  box: { borderWidth: 1, borderRadius: RADIUS.md },
+  lead: { padding: SPACE.xl, gap: SPACE.lg, justifyContent: "space-between", minHeight: 220 },
+  leadWide: { padding: SPACE.xxl, flexGrow: 1 },
+  leadTitle: { fontFamily: FONT.display, fontSize: 27, lineHeight: 32, letterSpacing: -0.3 },
   leadTitleWide: { fontSize: 36, lineHeight: 41 },
-  headline: { gap: 4, paddingVertical: SPACE.md + 2 },
-  headlineTitle: { fontFamily: FONT.headline, fontSize: 16, lineHeight: 21 },
-  column: { flex: 1, gap: 6 },
-  stacked: { gap: 6, paddingVertical: SPACE.lg },
-  columnTitle: { fontFamily: FONT.headline, fontSize: 18, lineHeight: 23 },
-  river: { flexDirection: "row", gap: SPACE.lg, paddingVertical: SPACE.lg },
-  riverTime: { width: 64, paddingTop: 1, fontFamily: FONT.sansMedium },
-  riverTitle: { fontFamily: FONT.headline, fontSize: 17, lineHeight: 23 },
+  small: { padding: SPACE.lg, gap: SPACE.md, justifyContent: "space-between" },
+  smallTitle: { fontFamily: FONT.headline, fontSize: 17, lineHeight: 22 },
 });

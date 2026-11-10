@@ -3,7 +3,7 @@ import { Pressable, View } from "react-native";
 import { useBriefing, type NewsItem } from "@/lib/api";
 import { openStory } from "@/lib/stories";
 import { useTheme } from "@/theme/theme";
-import { SPACE } from "@/theme/tokens";
+import { RADIUS, SPACE } from "@/theme/tokens";
 import { Text } from "./Text";
 
 /**
@@ -18,7 +18,7 @@ export function BriefingCard({ items }: { items: NewsItem[] }) {
   const byId = new Map(items.map((i) => [i.id, i]));
 
   return (
-    <View style={{ gap: SPACE.md, borderTopWidth: 1, borderTopColor: colors.rule, paddingTop: SPACE.md }}>
+    <View style={{ gap: SPACE.md, borderWidth: 1, borderColor: colors.line, borderRadius: RADIUS.md, backgroundColor: colors.sunken, padding: SPACE.lg }}>
       <Text variant="label" accessibilityRole="header">
         The Briefing
       </Text>

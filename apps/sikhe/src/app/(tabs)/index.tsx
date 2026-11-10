@@ -51,19 +51,11 @@ function TopStories({ wide }: { wide: boolean }) {
   const across = stories.slice(1, 4);
   const list = stories.slice(4, wide ? 10 : 8);
   return (
-    <View style={{ gap: SPACE.xl }}>
+    <View style={{ gap: SPACE.md }}>
       <StoryLead item={lead} />
-      {across.length > 0 && (
-        <View style={{ borderTopWidth: 1, borderTopColor: colors.rule, paddingTop: SPACE.lg }}>
-          <StoryColumns items={across} />
-        </View>
-      )}
+      {across.length > 0 && <StoryColumns items={across} />}
       <BriefingCard items={data.items} />
-      {list.length > 0 && (
-        <View style={{ borderTopWidth: 1, borderTopColor: colors.rule }}>
-          <StoryList items={list} />
-        </View>
-      )}
+      {list.length > 0 && <StoryList items={list} />}
       <View style={{ alignItems: "center" }}>
         <Button label="More good news" kind="quiet" icon="newspaper-outline" onPress={() => router.navigate("/news")} />
       </View>

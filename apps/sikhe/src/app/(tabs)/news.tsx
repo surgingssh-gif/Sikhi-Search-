@@ -137,23 +137,17 @@ export default function NewsScreen() {
             <View style={wide ? styles.front : { gap: SPACE.md }}>
               <View style={wide ? styles.frontLead : undefined}>
                 <StoryLead item={lead} />
-                {belowLead.length > 0 && (
-                  <View style={{ marginTop: SPACE.xl, paddingTop: SPACE.lg, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line }}>
-                    <StoryColumns items={belowLead} />
-                  </View>
-                )}
+                {belowLead.length > 0 && <StoryColumns items={belowLead} snippet={0} />}
               </View>
               {beside.length > 0 && (
-                <View style={wide ? [styles.frontSide, { borderLeftColor: colors.line }] : { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line }}>
-                  <StoryHeadlines items={beside} />
+                <View style={wide ? styles.frontSide : undefined}>
+                  <StoryHeadlines items={beside} fill={wide} />
                 </View>
               )}
             </View>
           )}
           {across.length > 0 && (
-            <View style={{ borderTopWidth: 1, borderTopColor: colors.rule, paddingTop: SPACE.lg }}>
-              <StoryColumns items={across} />
-            </View>
+            <StoryColumns items={across} />
           )}
           {sectionId === "top" && <BriefingCard items={data.items} />}
           {river.length > 0 && (
@@ -181,8 +175,8 @@ export default function NewsScreen() {
 const styles = StyleSheet.create({
   mapButton: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, height: 32, borderRadius: 999, borderWidth: 1 },
   pillText: { fontFamily: FONT.sansBold, fontSize: 11, letterSpacing: 0.7, textTransform: "uppercase" },
-  front: { flexDirection: "row", alignItems: "flex-start" },
-  frontLead: { flex: 2, paddingRight: SPACE.xxl },
-  frontSide: { flex: 1, paddingLeft: SPACE.xl, borderLeftWidth: StyleSheet.hairlineWidth, marginTop: -SPACE.md },
+  front: { flexDirection: "row", alignItems: "stretch", gap: SPACE.md },
+  frontLead: { flex: 2, gap: SPACE.md },
+  frontSide: { flex: 1 },
   more: { alignSelf: "center", marginTop: SPACE.lg, paddingHorizontal: 20, paddingVertical: 11, borderRadius: 999, borderWidth: 1 },
 });

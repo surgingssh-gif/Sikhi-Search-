@@ -255,6 +255,24 @@ export class NewsService {
     this.now = options.now ?? Date.now;
   }
 
+  private articles = new Map<string, { url: string; paragraphs: string[] }>();
+
+  /**
+   * The opening of one story, for its preview. Only stories in the current
+   * news are looked up, so the server never fetches an address it was handed.
+   */
+  async article(id: string): Promise<{ id: string; url: string; paragraphs: string[] } | null> {
+    const cached = this.articles.get(id);
+    if (cached) return { id, ...cached };
+    const item = (await this.latest()).items.find((i) => i.id === id);
+    if (!item) return null;
+    const url = isGoogleNewsLink(item.url) ? ((await resolveGoogleNewsUrl(item.url, this.fetchImpl)) ?? item.url) : item.url;
+    const paragraphs = isGoogleNewsLink(url) ? [] : await fetchArticleParagraphs(url, this.fetchImpl);
+    if (this.articles.size >= 500) this.articles.delete(this.articles.keys().next().value!);
+    this.articles.set(id, { url, paragraphs });
+    return { id, url, paragraphs };
+  }
+
   async latest(): Promise<{ items: NewsItem[]; failed: string[]; fetchedAt: string }> {
     if (!this.cache || this.now() - this.cache.at > this.ttlMs) {
       this.pending ??= this.refresh().finally(() => (this.pending = null));
@@ -645,5 +663,66 @@ export async function fetchPreview(url: string, fetchImpl: typeof globalThis.fet
     return { image: img && /^https:\/\//.test(img) ? img : null, description };
   } catch {
     return none;
+  }
+}
+
+/** Turns HTML entities into the characters they stand for. */
+function decodeEntities(s: string): string {
+  const named: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ", rsquo: "\u2019", lsquo: "\u2018", rdquo: "\u201D", ldquo: "\u201C", ndash: "\u2013", mdash: "\u2014", hellip: "\u2026" };
+  return s
+    .replace(/&#x([0-9a-f]+);/gi, (_, h: string) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (_, d: string) => String.fromCodePoint(Number(d)))
+    .replace(/&([a-z]+);/gi, (m, n: string) => named[n.toLowerCase()] ?? m);
+}
+
+/** Lines that are a page's furniture, not its story. */
+const BOILERPLATE = /cookie|subscribe|sign up|newsletter|all rights reserved|\u00A9|click here|read more|also read|follow us|download the app|advertis|javascript|whatsapp|telegram|log ?in|your browser|copyright|privacy policy|terms of (use|service)/i;
+
+/** The longest a preview paragraph gets, cut at a sentence. */
+const PARAGRAPH_MAX = 600;
+
+function clip(text: string, max: number): string {
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max);
+  const end = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("? "), cut.lastIndexOf("! "));
+  return end > max / 2 ? cut.slice(0, end + 1) : `${cut.replace(/\s+\S*$/, "")}\u2026`;
+}
+
+/**
+ * The opening paragraphs of an article page, for a short preview that links
+ * to the full story. Skips the page's menus, captions and sign-up boxes, and
+ * keeps at most `max` paragraphs of real sentences.
+ */
+export function articleParagraphs(html: string, max = 2): string[] {
+  let body = html
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/<(script|style|noscript|svg|nav|header|footer|aside|form|figure|figcaption|iframe|button|select)\b[\s\S]*?<\/\1>/gi, " ");
+  // A page's <article> holds the story when it has one.
+  const article = /<article\b[\s\S]*<\/article>/i.exec(body)?.[0];
+  if (article && /<p(\s[^>]*)?>/i.test(article)) body = article;
+  const out: string[] = [];
+  for (const m of body.matchAll(/<p(?:\s[^>]*)?>([\s\S]*?)<\/p>/gi)) {
+    const text = decodeEntities(m[1]!.replace(/<[^>]*>/g, " ")).replace(/\s+/g, " ").trim();
+    if (text.length < 80 || BOILERPLATE.test(text) || /^[A-Z][A-Z ]{2,}\s*[|:]/.test(text) || !/[.!?"'\u201D\u2019)]$/.test(text) || out.includes(text)) continue;
+    out.push(clip(text, PARAGRAPH_MAX));
+    if (out.length >= max) break;
+  }
+  return out;
+}
+
+/** The opening paragraphs of the article at `url`, or none if the page can't be read. */
+export async function fetchArticleParagraphs(url: string, fetchImpl: typeof globalThis.fetch = globalThis.fetch): Promise<string[]> {
+  try {
+    const res = await fetchImpl(url, {
+      headers: { accept: "text/html", "user-agent": "Mozilla/5.0 (compatible; AskSikhi/0.1; +https://github.com/surgingssh-gif/Sikhi-Search-)" },
+      signal: AbortSignal.timeout(8000),
+      redirect: "follow",
+    });
+    if (!res.ok || !res.body || !/html/i.test(res.headers.get("content-type") ?? "html")) return [];
+    // Enough of the page for its opening paragraphs; stop after ~1.5 MB.
+    const html = await readUntil(res, (t) => (t.match(/<\/p>/gi)?.length ?? 0) > 40, 1_500_000);
+    return articleParagraphs(html);
+  } catch {
+    return [];
   }
 }

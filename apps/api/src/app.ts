@@ -40,7 +40,7 @@ export interface AppDeps {
   /** Sikh history from Wikipedia. Absent in tests that don't need it. */
   wikipedia?: Pick<WikipediaClient, "search" | "summaries" | "article">;
   /** Sikh and Punjab news. */
-  news?: Pick<NewsService, "latest" | "briefingToday">;
+  news?: Pick<NewsService, "latest" | "briefingToday"> & Partial<Pick<NewsService, "article">>;
   allowedOrigins?: string[];
   /** Per-client limit on AI endpoints, per minute. */
   aiRequestsPerMinute?: number;
@@ -124,6 +124,17 @@ export function createApp({ banidb, llm, library, news, wikipedia, allowedOrigin
     const filtered = category ? items.filter((i) => i.categories.includes(category as never)) : items;
     c.header("cache-control", "public, max-age=300");
     return c.json({ items: filtered.slice(0, limit), failed, fetchedAt });
+  });
+
+  // The opening paragraphs of one story, for its preview. Each one fetches a publisher's page, so it's limited.
+  const articleLimit = rateLimit({ limit: 30, windowMs: 60_000 });
+  app.get("/v1/news/article/:id", articleLimit, async (c) => {
+    const id = c.req.param("id");
+    if (!news?.article || !/^[\w-]{1,80}$/.test(id)) return c.json({ error: "not_found" }, 404);
+    const article = await news.article(id);
+    if (!article) return c.json({ error: "not_found" }, 404);
+    c.header("cache-control", "public, max-age=3600");
+    return c.json(article);
   });
 
   app.get("/v1/news/briefing", async (c) => {

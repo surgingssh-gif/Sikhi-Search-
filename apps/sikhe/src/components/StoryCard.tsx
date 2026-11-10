@@ -2,7 +2,8 @@ import { Image } from "expo-image";
 import { useState } from "react";
 import { Pressable, StyleSheet, useWindowDimensions, View, type LayoutChangeEvent } from "react-native";
 import type { NewsItem } from "@/lib/api";
-import { openStory, timeAgo, type Story } from "@/lib/stories";
+import { usePreview } from "@/lib/preview";
+import { timeAgo, type Story } from "@/lib/stories";
 import { useTheme } from "@/theme/theme";
 import { FONT, NARROW, RADIUS, SPACE } from "@/theme/tokens";
 import { Text } from "./Text";
@@ -107,13 +108,15 @@ function Snippet({ item, lines }: { item: NewsItem; lines: number }) {
   );
 }
 
-/** A story in its box. Tapping opens the publisher's page. */
-function Story({ item, style, children }: { item: NewsItem; style?: object; children: React.ReactNode }) {
+/** A story in its box. Tapping opens its preview. */
+function Story({ item, style, children }: { item: Story; style?: object; children: React.ReactNode }) {
   const { colors } = useTheme();
+  const preview = usePreview();
   return (
     <Pressable
-      onPress={() => openStory(item)}
-      accessibilityRole="link"
+      onPress={() => preview(item)}
+      accessibilityRole="button"
+      accessibilityHint="Opens a preview of the story"
       style={(state) => {
         const hovered = (state as { hovered?: boolean }).hovered;
         return [

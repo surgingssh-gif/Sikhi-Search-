@@ -10,6 +10,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import * as SystemUI from "expo-system-ui";
 import { useEffect, useState } from "react";
+import { PreviewProvider } from "@/components/StoryPreview";
 import { AreaProvider } from "@/lib/area";
 import { ChatsProvider } from "@/lib/ask";
 import { LibraryProvider } from "@/lib/library";
@@ -66,7 +67,9 @@ export default function RootLayout() {
         <LibraryProvider>
           <ChatsProvider>
             <AreaProvider>
-              <Root />
+              <PreviewProvider>
+                <Root />
+              </PreviewProvider>
             </AreaProvider>
           </ChatsProvider>
         </LibraryProvider>

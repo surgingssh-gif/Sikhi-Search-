@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
-import { cleanSnippet, DEFAULT_FEEDS, guessRating, imageFrom, NewsService, parseFeed, placeFor, resolveGoogleNewsUrl, slugify, type NewsFeed } from "../src";
+import { articleParagraphs, cleanSnippet, DEFAULT_FEEDS, guessRating, imageFrom, NewsService, parseFeed, placeFor, resolveGoogleNewsUrl, slugify, type NewsFeed } from "../src";
 import { fakeLlm } from "./fakes";
 
 // Fixtures are real responses recorded from each publisher's RSS feed.
@@ -49,6 +49,31 @@ describe("parseFeed", () => {
       expect(i.language).toBe("pa");
       expect(`${i.title} ${i.snippet}`).toMatch(/ਸਿੱਖ|ਪੰਜਾਬ|ਗੁਰਦੁਆਰ|ਗੁਰੂ|ਅਕਾਲ ਤਖ|ਸ਼੍ਰੋਮਣੀ|ਅੰਮ੍ਰਿਤਸਰ|ਦਰਬਾਰ ਸਾਹਿਬ|ਹਰਿਮੰਦਰ|ਖ਼ਾਲਸਾ|ਖਾਲਸਾ|ਜਥੇਦਾਰ/);
     }
+  });
+});
+
+describe("articleParagraphs", () => {
+  it("keeps the opening paragraphs of the story and skips the page around it", () => {
+    const html = `<html><head><title>x</title></head><body>
+      <nav><p>Home | World | Punjab and everything else you could want to read about today here.</p></nav>
+      <article>
+        <figure><figcaption><p>Jyot Singh at the Georgia State Capitol in Atlanta, photographed on the day.</p></figcaption></figure>
+        <p>Short line.</p>
+        <p>Subscribe to our newsletter to get the best stories of the Sikh world in your inbox every day.</p>
+        <p>Jyot Singh, a Yale graduate, has won the seat for House District 97 in Georgia, becoming the first Sikh in the state&rsquo;s assembly.</p>
+        <p>The <a href="/x">win</a> came after a long campaign &amp; door knocking across Gwinnett County, his supporters said on Tuesday.</p>
+        <p>A third paragraph that should never be shown in the preview because two is the limit here.</p>
+      </article>
+      <footer><p>All rights reserved. Copyright 2026 by the publisher of this newspaper and its site.</p></footer>
+    </body></html>`;
+    expect(articleParagraphs(html)).toEqual([
+      "Jyot Singh, a Yale graduate, has won the seat for House District 97 in Georgia, becoming the first Sikh in the state\u2019s assembly.",
+      "The win came after a long campaign & door knocking across Gwinnett County, his supporters said on Tuesday.",
+    ]);
+  });
+
+  it("finds nothing on a page with no story", () => {
+    expect(articleParagraphs("<html><body><div>Just a menu</div></body></html>")).toEqual([]);
   });
 });
 

@@ -279,6 +279,14 @@ describe("News routes", () => {
     expect(one.items).toHaveLength(1);
   });
 
+  it("serves a story's opening paragraphs, for stories in the news only", async () => {
+    const withArticle = { ...news, article: async (id: string) => (id === "a" ? { id, url: "https://example.org/a", paragraphs: ["One.", "Two."] } : null) };
+    const app = createApp({ banidb: banidbWith(async () => shabad), news: withArticle });
+    expect(await (await app.request("/v1/news/article/a")).json()).toEqual({ id: "a", url: "https://example.org/a", paragraphs: ["One.", "Two."] });
+    expect((await app.request("/v1/news/article/zzz")).status).toBe(404);
+    expect((await app.request("/v1/news/article/a%2F..%2Fx")).status).toBe(404);
+  });
+
   it("serves the briefing only when a model is configured", async () => {
     expect((await createApp({ banidb: banidbWith(async () => shabad), news }).request("/v1/news/briefing")).status).toBe(503);
     const res = await createApp({ banidb: banidbWith(async () => shabad), news, llm: stubLlm }).request("/v1/news/briefing");

@@ -48,19 +48,23 @@ function TopStories({ wide }: { wide: boolean }) {
   const lead = stories.find((i) => i.image) ?? stories[0];
   if (!lead) return <Text variant="small">No stories right now.</Text>;
   const others = stories.filter((i) => i !== lead);
-  const grid = [...others.filter((i) => i.image), ...others.filter((i) => !i.image)].slice(0, wide ? 3 : 4);
+  // Picture cards only for stories with photos; the rest go in the list.
+  const photos = others.filter((i) => i.image);
+  const grid = photos.length < 2 ? [] : photos.slice(0, wide ? 3 : 4);
   const inGrid = new Set(grid.map((i) => i.id));
   const list = others.filter((i) => !inGrid.has(i.id)).slice(0, wide ? 6 : 4);
   return (
     <View style={{ gap: SPACE.xl }}>
       <StoryCard item={lead} variant="lead" />
-      <View style={{ paddingTop: SPACE.lg, borderTopWidth: 1, borderTopColor: colors.line }}>
-        <StoryGrid items={grid} />
-      </View>
+      {grid.length > 0 && (
+        <View style={{ paddingTop: SPACE.lg, borderTopWidth: 1, borderTopColor: colors.line }}>
+          <StoryGrid items={grid} />
+        </View>
+      )}
       <BriefingCard items={data.items} />
       <StoryList items={list} />
       <View style={{ alignItems: "center" }}>
-        <Button label="All the news" kind="quiet" icon="newspaper-outline" onPress={() => router.navigate("/news")} />
+        <Button label="More good news" kind="quiet" icon="newspaper-outline" onPress={() => router.navigate("/news")} />
       </View>
     </View>
   );
@@ -102,7 +106,7 @@ export default function TodayScreen() {
       {/* The front page: the news leads, and beside it on wide screens a rail with the Hukamnama and the dates. */}
       <View style={wide ? styles.front : { gap: SPACE.xl }}>
         <View style={wide ? styles.lead : { gap: SPACE.xl }}>
-          <Section title="Top stories" href="/news" more="All news">
+          <Section title="Good news" href="/news" more="All news">
             <TopStories wide={wide} />
           </Section>
         </View>

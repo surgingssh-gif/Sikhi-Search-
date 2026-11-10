@@ -81,13 +81,15 @@ export default function NewsScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const section = NEWS_SECTIONS.find((s) => s.id === sectionId)!;
-  const latest = sectionId === "latest";
+  // The newest-first sections keep strict order, split by day.
+  const latest = sectionId === "latest" || sectionId === "panth";
   const stories = data ? section.stories(data.items) : [];
   // Lead with a photo when the section has one near the top; the newest-first section keeps strict order.
   const lead = latest ? undefined : (stories.slice(0, 5).find((i) => i.image) ?? stories[0]);
   const others = stories.filter((i) => i !== lead);
-  // The grid favours stories with photos, so it reads as a page of pictures.
-  const grid = latest ? [] : [...others.filter((i) => i.image), ...others.filter((i) => !i.image)].slice(0, GRID);
+  // The grid is only stories with photos, so it reads as a page of pictures; the rest go in the list.
+  const photos = others.filter((i) => i.image);
+  const grid = latest || photos.length < 2 ? [] : photos.slice(0, GRID);
   const inGrid = new Set(grid.map((i) => i.id));
   const river = others.filter((i) => !inGrid.has(i.id));
 
@@ -99,7 +101,7 @@ export default function NewsScreen() {
   };
 
   return (
-    <Screen masthead title="News" kicker="Sikh and Punjab news, ranked for Sikhs in America" right={<MapButton />} refreshing={refreshing} onRefresh={refresh}>
+    <Screen masthead title="News" kicker="Good news from the Sikh kaum, America first" right={<MapButton />} refreshing={refreshing} onRefresh={refresh}>
       <View style={{ gap: SPACE.sm }}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -SPACE.xl + 4 }} contentContainerStyle={{ gap: SPACE.sm, paddingHorizontal: SPACE.xl - 4 }}>
           {NEWS_SECTIONS.map((s) => (
@@ -137,7 +139,7 @@ export default function NewsScreen() {
           {river.length > 0 && (
             <View style={{ gap: SPACE.sm }}>
               {!latest && <SectionHeader title="More stories" />}
-              <River items={river.slice(0, shown)} byDay={latest} />
+              <River items={river.slice(0, shown)} byDay={latest || sectionId === "panth"} />
               {river.length > shown && (
                 <Pressable onPress={() => setShown(shown + PAGE)} accessibilityRole="button" style={StyleSheet.flatten([styles.more, { borderColor: colors.ink }])}>
                   <Text variant="meta" color="ink" style={styles.pillText}>
@@ -148,7 +150,7 @@ export default function NewsScreen() {
             </View>
           )}
           <Text variant="meta" color="inkFaint">
-            From Sikh outlets, Google News and Indian papers. Stories are ranked for Sikhs in America; crime and politics are kept off the top.
+            From Sikh outlets, Google News and local papers. Each story is sorted by AI into a kind of good news; crime, hate, disputes and politics stay out of the good news, in Panth news only.
           </Text>
         </>
       )}

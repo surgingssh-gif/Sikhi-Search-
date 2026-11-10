@@ -6,6 +6,14 @@ import type { NewsItem } from "./api";
 export const notNegative = (i: NewsItem) => i.tone !== "negative";
 /** Sikh news that isn't crime, violence or a feud. */
 export const isSikhNews = (i: NewsItem) => i.categories.includes("panth") && notNegative(i);
+/** Published in the last three weeks. Some feeds republish old posts, and good news should be news. */
+const recent = (i: NewsItem, now = Date.now()) => !i.publishedAt || now - new Date(i.publishedAt).getTime() < 21 * 86_400_000;
+/** Good news about Sikhs proper: an achievement, seva, a celebration, heritage or young Sikhs. */
+export const isGoodNews = (i: NewsItem) => i.tone === "uplifting" && i.kind !== null && i.kind !== "community" && recent(i);
+/** Good news, or friendly everyday community news. */
+export const isFriendly = (i: NewsItem) => i.tone !== "negative" && i.kind !== null && recent(i);
+/** The harder news of the Panth: justice, disputes and dealings with governments. Kept apart from the good news. */
+export const isHardNews = (i: NewsItem) => i.categories.includes("panth") && i.kind === null && i.interest >= 1;
 
 /**
  * How high a story goes: what a Sikh in America wants to read, good news, a
@@ -22,6 +30,28 @@ export function ranked(items: NewsItem[], now = Date.now()): NewsItem[] {
     .map((i) => ({ i, s: storyScore(i, now) }))
     .sort((a, b) => b.s - a.s)
     .map(({ i }) => i);
+}
+
+const STOP = new Set(["the", "and", "for", "with", "from", "that", "this", "into", "after", "over", "sikh", "sikhs", "makes", "becomes", "first"]);
+const wordsOf = (title: string) => new Set(title.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter((w) => w.length > 3 && !STOP.has(w)));
+
+/**
+ * Drops a story when an earlier one in the list has nearly the same headline,
+ * so one event covered by four outlets shows once. Keeps the first, which in a
+ * ranked list is the best.
+ */
+export function dedupe(items: NewsItem[]): NewsItem[] {
+  const kept: { item: NewsItem; words: Set<string> }[] = [];
+  for (const item of items) {
+    const words = wordsOf(item.title);
+    const same = kept.some((k) => {
+      let shared = 0;
+      for (const w of words) if (k.words.has(w)) shared++;
+      return shared >= 3 && shared / Math.min(words.size, k.words.size) >= 0.5;
+    });
+    if (!same) kept.push({ item, words });
+  }
+  return kept.map((k) => k.item);
 }
 
 export const newest = (items: NewsItem[]) => [...items].sort((a, b) => (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""));
@@ -48,45 +78,31 @@ export interface NewsSection {
   stories: (items: NewsItem[]) => NewsItem[];
 }
 
-/** Panth news: skip negative stories unless they matter a great deal to readers. */
-const panthic = (i: NewsItem) => i.categories.includes("panth") && (notNegative(i) || i.interest >= 3);
+const ofKind = (kind: NonNullable<NewsItem["kind"]>) => (items: NewsItem[]) => dedupe(ranked(items.filter((i) => isFriendly(i) && i.kind === kind)));
 
+/**
+ * The news, by kind of good news. "Good news" leads everywhere; the harder
+ * news of the Panth has its own clearly labelled section at the end.
+ */
 export const NEWS_SECTIONS: NewsSection[] = [
   {
     id: "top",
-    label: "Top",
-    blurb: "The best of today's Sikh news, America first.",
-    stories: (items) => capPerPlace(ranked(items.filter((i) => isSikhNews(i) && i.interest >= 2)), 2),
+    label: "Good news",
+    blurb: "The best of today's good news from the Sikh kaum, America first.",
+    stories: (items) => capPerPlace(dedupe(ranked(items.filter(isGoodNews))), 2),
   },
-  {
-    id: "america",
-    label: "America",
-    blurb: "Gurdwaras, celebrations, seva and Sikh Americans making news across the United States.",
-    stories: (items) => ranked(items.filter((i) => panthic(i) && i.america)),
-  },
-  {
-    id: "world",
-    label: "Around the world",
-    blurb: "Sikhs in Canada, the UK, Australia and beyond.",
-    stories: (items) => ranked(items.filter((i) => panthic(i) && i.categories.includes("diaspora") && !i.america)),
-  },
+  { id: "achievement", label: "Achievements", blurb: "Firsts, honours, elections and Sikhs excelling at what they do.", stories: ofKind("achievement") },
+  { id: "seva", label: "Seva", blurb: "Langar, relief, charity and Sikhs serving their neighbours.", stories: ofKind("seva") },
+  { id: "celebration", label: "Celebrations", blurb: "Gurpurabs, nagar kirtans, Vaisakhi, Bandi Chhor and festivals.", stories: ofKind("celebration") },
+  { id: "heritage", label: "Heritage", blurb: "Gurdwaras restored, Sikh history, museums, books and films.", stories: ofKind("heritage") },
+  { id: "youth", label: "Youth", blurb: "Students, scholarships, sport, gatka and young Sikhs.", stories: ofKind("youth") },
+  { id: "community", label: "Community", blurb: "Everyday news from gurdwaras and sangats: open days, new gurdwaras, interfaith visits.", stories: ofKind("community") },
+  { id: "latest", label: "Latest", blurb: "All the good and community news, newest first.", stories: (items) => dedupe(newest(items.filter(isFriendly))) },
   {
     id: "panth",
-    label: "Panth",
-    blurb: "Sri Akal Takht Sahib, the SGPC, Sikh heritage and history, and the Panth in Punjab.",
-    stories: (items) => ranked(items.filter((i) => panthic(i) && !i.categories.includes("diaspora") && i.interest >= 1)),
-  },
-  {
-    id: "punjab",
-    label: "Punjab",
-    blurb: "Farming, water, culture and everyday life in Punjab, without the politics.",
-    stories: (items) => ranked(items.filter((i) => i.categories.includes("punjab") && !i.categories.includes("panth") && notNegative(i) && (i.interest >= 1 || i.tone === "uplifting"))),
-  },
-  {
-    id: "latest",
-    label: "Latest",
-    blurb: "All Sikh news, newest first.",
-    stories: (items) => newest(items.filter(isSikhNews)),
+    label: "Panth news",
+    blurb: "The harder news: justice, remembrance, disputes and the Panth's dealings with governments. Kept apart from the good news.",
+    stories: (items) => dedupe(newest(items.filter(isHardNews))),
   },
 ];
 

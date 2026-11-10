@@ -259,6 +259,7 @@ describe("News routes", () => {
     place: null,
     interest: 2,
     tone: "neutral",
+    kind: null,
     america: false,
     rated: "guess",
   });

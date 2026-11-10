@@ -96,14 +96,26 @@ describe("NewsService", () => {
 describe("guessRating", () => {
   const sikh = { panthic: true, sikhOutlet: false };
   it("rates good news about Sikhs in America highest", () => {
-    expect(guessRating("Gold domes now welcome worshippers at new Sikh temple", { ...sikh, region: "United States" })).toEqual({ interest: 3, tone: "uplifting", america: true });
+    expect(guessRating("Gold domes now welcome worshippers at new Sikh temple", { ...sikh, region: "United States" })).toEqual({ interest: 3, tone: "uplifting", kind: "community", america: true });
   });
   it("marks crime and violence negative and lowers its interest", () => {
     expect(guessRating("Firing outside gurdwara in Ludhiana's Jagraon, masked man leaves threat letter", { ...sikh, region: "Punjab" })).toEqual({
       interest: 0,
       tone: "negative",
+      kind: null,
       america: false,
     });
+  });
+  it("guesses the kind of good news", () => {
+    const kindOf = (t: string) => guessRating(t, { ...sikh, region: "United States" }).kind;
+    expect(kindOf("Sikh volunteers serve langar to flood victims")).toBe("seva");
+    expect(kindOf("Thousands celebrate Vaisakhi at Yuba City parade")).toBe("celebration");
+    expect(kindOf("Jyot Singh becomes first Sikh elected to Georgia Assembly")).toBe("achievement");
+    expect(kindOf("Sikh students win scholarship")).toBe("youth");
+    // Bad news, and news that isn't about Sikhs, is never good news.
+    expect(kindOf("Sikh man attacked outside gurdwara")).toBeNull();
+    expect(kindOf("On Bandi Chhor Divas, Akal Takht jathedar calls for release of Sikh prisoners")).toBeNull();
+    expect(guessRating("Punjab CM Mann celebrates Diwali with employees", { panthic: false, sikhOutlet: false, region: "Punjab" }).kind).toBeNull();
   });
   it("gives Indian politics without a Sikh angle little interest", () => {
     expect(guessRating("Pakistan minister invites Punjab CM Mann", { panthic: false, sikhOutlet: false, region: "Punjab" }).interest).toBe(0);
@@ -123,9 +135,9 @@ describe("NewsService ratings", () => {
         // Oldest first: parade, festival, langar.
         return {
           ratings: [
-            { id: ids[0], interest: 3, tone: "uplifting", america: true, duplicateOf: null },
-            { id: ids[1], interest: 3, tone: "uplifting", america: true, duplicateOf: ids[0] },
-            { id: ids[2], interest: 2, tone: "neutral", america: true, duplicateOf: null },
+            { id: ids[0], interest: 3, tone: "uplifting", kind: "celebration", america: true, duplicateOf: null },
+            { id: ids[1], interest: 3, tone: "uplifting", kind: "celebration", america: true, duplicateOf: ids[0] },
+            { id: ids[2], interest: 2, tone: "neutral", kind: "seva", america: true, duplicateOf: null },
           ],
         };
       },
@@ -142,7 +154,7 @@ describe("NewsService ratings", () => {
     await service.settled();
     const after = await service.latest();
     expect(after.items.map((i) => i.title)).toEqual(["Gurdwara holds langar", "Sikh parade draws thousands in Yuba City"]);
-    expect(after.items[1]).toMatchObject({ interest: 3, tone: "uplifting", rated: "model" });
+    expect(after.items[1]).toMatchObject({ interest: 3, tone: "uplifting", kind: "celebration", rated: "model" });
     expect(calls).toHaveLength(1);
   });
 

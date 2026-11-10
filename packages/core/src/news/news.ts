@@ -2,7 +2,7 @@ import { XMLParser } from "fast-xml-parser";
 import { z } from "zod";
 import type { JsonLlm, LlmUsage } from "../ai/llm";
 import { placeFor, type PlaceRegion } from "./places";
-import { guessRating, rateHeadlines, type ModelRating, type StoryTone } from "./rating";
+import { guessRating, rateHeadlines, type GoodNewsKind, type ModelRating, type StoryTone } from "./rating";
 
 /**
  * Sikh and Punjab news from publishers' own RSS feeds. We show headlines,
@@ -45,6 +45,8 @@ export interface NewsItem {
   /** 0-3: how much a Sikh in America would want to read it. */
   interest: number;
   tone: StoryTone;
+  /** The kind of good news, or null for a story that isn't good news about Sikhs. */
+  kind: GoodNewsKind | null;
   /** The story happens in the United States. */
   america: boolean;
   /** Whether interest and tone come from the model or a keyword guess. */
@@ -69,6 +71,12 @@ export const DEFAULT_FEEDS: NewsFeed[] = [
   { id: "gnews-us", name: "Google News", url: googleNews("Sikh", "US"), language: "en", categories: ["panth"], aggregator: true, max: 60 },
   { id: "gnews-us-gurdwara", name: "Google News", url: googleNews("gurdwara", "US"), language: "en", categories: ["panth"], aggregator: true, max: 30 },
   { id: "gnews-ca", name: "Google News", url: googleNews("Sikh", "CA"), language: "en", categories: ["panth"], aggregator: true, max: 30 },
+  // Searches aimed at good news, so there is always plenty of it.
+  { id: "gnews-us-good", name: "Google News", url: googleNews(`Sikh (honored OR honoured OR award OR "first Sikh" OR elected OR appointed OR celebrates OR celebration OR parade OR "nagar kirtan")`, "US"), language: "en", categories: ["panth"], aggregator: true, max: 30 },
+  { id: "gnews-us-seva", name: "Google News", url: googleNews(`(Sikh OR gurdwara) (langar OR seva OR volunteers OR donate OR "free meals" OR charity OR interfaith)`, "US"), language: "en", categories: ["panth"], aggregator: true, max: 30 },
+  { id: "gnews-us-youth", name: "Google News", url: googleNews(`Sikh (student OR students OR scholarship OR athlete OR gatka OR basketball OR cricket OR soccer OR graduates)`, "US"), language: "en", categories: ["panth"], aggregator: true, max: 20 },
+  { id: "gnews-world-good", name: "Google News", url: googleNews(`Sikh (honoured OR award OR "first Sikh" OR langar OR seva OR volunteers OR celebrates OR "nagar kirtan" OR heritage)`, "GB"), language: "en", categories: ["panth"], aggregator: true, max: 30 },
+  { id: "gnews-ca-good", name: "Google News", url: googleNews(`Sikh (honoured OR award OR "first Sikh" OR langar OR seva OR volunteers OR celebrates OR "nagar kirtan")`, "CA"), language: "en", categories: ["panth"], aggregator: true, max: 20 },
   { id: "gnews-gb", name: "Google News", url: googleNews("Sikh", "GB"), language: "en", categories: ["panth"], aggregator: true, max: 30 },
   { id: "sikhcoalition", name: "Sikh Coalition", url: "https://www.sikhcoalition.org/feed/", language: "en", categories: ["panth", "diaspora"], sikhOutlet: true },
   { id: "sikhfoundation", name: "The Sikh Foundation", url: "https://www.sikhfoundation.org/feed/", language: "en", categories: ["panth", "diaspora"], sikhOutlet: true },
@@ -181,10 +189,10 @@ const BriefingSchema = z.object({
     .describe("4-6 bullets"),
 });
 
-const BRIEFING_SYSTEM = `You write a short daily news briefing for Ask Sikhi, read by Sikhs outside India, most of all Sikh Americans.
-You are given recent headlines from Sikh outlets and from local and national news. Write 4-6 bullets a Sikh in America would be glad to read.
-- Lead with Sikh life in America and the diaspora: gurdwaras, celebrations, seva, achievements and firsts, Sikhs in public life, civil rights. Then major Panthic news. Include at most one Punjab story, and only if it matters to Sikhs abroad.
-- Prefer good news. Leave out crime, violence, accidents, Indian party politics and feuds unless they are a major story for Sikhs everywhere.
+const BRIEFING_SYSTEM = `You write a short daily briefing of good news for Sikhe, a home for the good news of the Sikh kaum, read by Sikhs outside India, most of all Sikh Americans.
+You are given recent good-news headlines from Sikh outlets and from local and national news. Write 4-6 bullets a Sikh in America would be glad and proud to read.
+- Lead with Sikh life in America, then the rest of the Sikh world: achievements and firsts, seva, celebrations, heritage, young Sikhs, community.
+- Good news only. Leave out anything about crime, violence, hate, disputes, demands, court cases or politics, even if it appears in the list.
 - One story per bullet. Never combine unrelated stories into one bullet.
 - Use only what the headlines and snippets say. Do not add facts, numbers, causes or predictions.
 - Attribute claims that come from one side ("according to Sikh Siyasat", "the SGPC said").
@@ -267,7 +275,7 @@ export class NewsService {
     const ids = new Set(items.map((i) => i.id));
     for (const item of items) {
       const r = this.ratings.get(item.id);
-      if (r) Object.assign(item, { interest: r.interest, tone: r.tone, america: r.america, rated: "model" });
+      if (r) Object.assign(item, { interest: r.interest, tone: r.tone, kind: r.kind, america: r.america, rated: "model" });
     }
     const dropped = new Set<string>();
     for (const item of items) {
@@ -343,7 +351,7 @@ export class NewsService {
       // The stories our readers care most about, newest first within each level.
       await this.rating;
       const recent = items
-        .filter((i) => i.language === "en" && i.interest >= 1 && i.tone !== "negative")
+        .filter((i) => i.language === "en" && i.tone !== "negative" && i.kind !== null)
         .sort((a, b) => b.interest - a.interest)
         .slice(0, 26);
       if (recent.length === 0) return { generatedAt: new Date(this.now()).toISOString(), bullets: [], usage: null };

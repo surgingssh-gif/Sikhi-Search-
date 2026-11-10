@@ -7,18 +7,19 @@ import { useTheme } from "@/theme/theme";
 import { FONT, NARROW, RADIUS, SPACE } from "@/theme/tokens";
 import { Text } from "./Text";
 
-/** A small topic label over a headline: "America · Yuba City", "Panth", "Punjab". */
+const KIND_LABEL: Record<NonNullable<NewsItem["kind"]>, string> = {
+  achievement: "Achievement",
+  seva: "Seva",
+  celebration: "Celebration",
+  heritage: "Heritage",
+  youth: "Youth",
+  community: "Community",
+};
+
+/** A small label over a headline: the kind of good news and where, like "Seva · Yuba City". */
 export function kickerOf(item: NewsItem): string {
-  const topic = item.america
-    ? "America"
-    : item.categories.includes("diaspora")
-      ? "World"
-      : item.categories.includes("panth")
-        ? "Panth"
-        : item.categories.includes("punjab")
-          ? "Punjab"
-          : "News";
-  const place = item.place && !["Punjab", "United States", "India"].includes(item.place.name) ? item.place.name : null;
+  const topic = item.kind ? KIND_LABEL[item.kind] : item.categories.includes("panth") ? "Panth" : "News";
+  const place = item.place && !["Punjab", "India"].includes(item.place.name) ? item.place.name : item.america ? "America" : null;
   return place ? `${topic} · ${place}` : topic;
 }
 

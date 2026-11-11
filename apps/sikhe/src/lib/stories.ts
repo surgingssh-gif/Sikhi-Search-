@@ -152,6 +152,51 @@ export interface NewsSection {
   stories: (items: NewsItem[]) => NewsItem[];
 }
 
+/** Hard news rather than good news. */
+const isHard = (i: NewsItem) => !i.kind && (i.beat ?? null) !== null;
+
+/** How many of the first stories are balanced; the rest keep their ranking. */
+const BALANCED = 30;
+
+/**
+ * Reorders the top of a ranked list so it mixes hard news and good news, and
+ * no one section (Khalistan, Seva...) fills it. Each place goes to the best
+ * story left, after a penalty for a story of a side that's already ahead and
+ * for each story already picked from its section. A story far more important
+ * than the rest still leads.
+ */
+export function balanced<T extends NewsItem>(items: T[], now = Date.now()): T[] {
+  const left = items.slice(0, BALANCED * 2).map((i) => ({ i, score: storyScore(i, now) }));
+  const out: T[] = [];
+  const perSection = new Map<string, number>();
+  let hard = 0;
+  let good = 0;
+  while (left.length && out.length < BALANCED) {
+    let best = 0;
+    let bestValue = -Infinity;
+    left.forEach((c, n) => {
+      const h = isHard(c.i);
+      const section = h ? `beat:${c.i.beat}` : `kind:${c.i.kind}`;
+      let value = c.score - (perSection.get(section) ?? 0) * 0.7;
+      // Hard news is never more than one story ahead of the good news; the good may run two ahead.
+      if (h && hard > good) value -= 1.6 * (hard - good);
+      if (!h && good > hard + 1) value -= 0.8 * (good - hard - 1);
+      if (value > bestValue) {
+        bestValue = value;
+        best = n;
+      }
+    });
+    const [{ i }] = left.splice(best, 1);
+    out.push(i);
+    if (isHard(i)) hard++;
+    else good++;
+    const section = isHard(i) ? `beat:${i.beat}` : `kind:${i.kind}`;
+    perSection.set(section, (perSection.get(section) ?? 0) + 1);
+  }
+  const picked = new Set(out);
+  return [...out, ...items.filter((i) => !picked.has(i))];
+}
+
 /** Groups one event's coverage, then ranks the groups, so wide coverage counts. */
 const grouped = (items: NewsItem[]) => ranked(dedupe(ranked(items)));
 
@@ -169,8 +214,8 @@ export const NEWS_SECTIONS: NewsSection[] = [
     label: "Top stories",
     blurb: "What matters most to the Sikh kaum today, good news and hard news.",
     // One ranking: how important a story is counts, and so does how fresh,
-    // so today's story can lead over last week's big one.
-    stories: (items) => capPerPlace(grouped(items.filter(isTopNews)), 2),
+    // so today's story can lead over last week's big one. Then balanced, so the top mixes hard and good news.
+    stories: (items) => balanced(capPerPlace(grouped(items.filter(isTopNews)), 2)),
   },
   {
     id: "good",

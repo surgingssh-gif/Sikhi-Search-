@@ -78,6 +78,8 @@ export const FONT = {
   sansBold: "LibreFranklin_700Bold",
   /** The nameplate only: Playfair Display, extra bold. */
   nameplate: "PlayfairDisplay_800ExtraBold",
+  /** The nameplate itself: Playfair Display, black italic. */
+  nameplateItalic: "PlayfairDisplay_900Black_Italic",
   gurmukhi: "NotoSerifGurmukhi_400Regular",
   gurmukhiBold: "NotoSerifGurmukhi_600SemiBold",
 } as const;

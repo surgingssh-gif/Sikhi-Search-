@@ -1,7 +1,7 @@
 import { LibreFranklin_400Regular, LibreFranklin_500Medium, LibreFranklin_700Bold } from "@expo-google-fonts/libre-franklin";
 import { NotoSerifGurmukhi_400Regular, NotoSerifGurmukhi_600SemiBold } from "@expo-google-fonts/noto-serif-gurmukhi";
 import { SourceSerif4_400Regular, SourceSerif4_400Regular_Italic, SourceSerif4_600SemiBold, SourceSerif4_700Bold } from "@expo-google-fonts/source-serif-4";
-import { PlayfairDisplay_800ExtraBold } from "@expo-google-fonts/playfair-display";
+import { PlayfairDisplay_800ExtraBold, PlayfairDisplay_900Black_Italic } from "@expo-google-fonts/playfair-display";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
 import * as Notifications from "expo-notifications";
@@ -50,6 +50,7 @@ export default function RootLayout() {
     LibreFranklin_500Medium,
     LibreFranklin_700Bold,
     PlayfairDisplay_800ExtraBold,
+    PlayfairDisplay_900Black_Italic,
     NotoSerifGurmukhi_400Regular,
     NotoSerifGurmukhi_600SemiBold,
   });

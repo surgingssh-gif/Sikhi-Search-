@@ -71,7 +71,8 @@ jobs:
 
       - name: Fetch, rate and summarise the news
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # The key may be saved under either name.
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY || secrets.API_KEY }}
         run: |
           rm -rf apps/sikhe/dist/data
           npx tsx scripts/build-news.ts apps/sikhe/dist/data .news-memory.json

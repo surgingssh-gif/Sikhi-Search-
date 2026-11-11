@@ -23,6 +23,8 @@ import {
   type WikipediaClient,
   slugify,
   type BaniDbClient,
+  type Edition,
+  type EditionSummary,
   type JsonLlm,
   type LibraryEntry,
   type Stage,
@@ -41,6 +43,12 @@ export interface AppDeps {
   wikipedia?: Pick<WikipediaClient, "search" | "summaries" | "article">;
   /** Sikh and Punjab news. */
   news?: Pick<NewsService, "latest" | "briefingToday"> & Partial<Pick<NewsService, "article">>;
+  /** The daily magazine's issues, written by the hourly job. */
+  editions?: {
+    latest(): Promise<Edition | null>;
+    get(date: string): Promise<Edition | null>;
+    list(): Promise<EditionSummary[]>;
+  };
   allowedOrigins?: string[];
   /** Per-client limit on AI endpoints, per minute. */
   aiRequestsPerMinute?: number;
@@ -67,7 +75,7 @@ const DiscussBody = AskBody.extend({ shabadId: z.number().int().positive() });
 
 const ResearchBody = z.object({ topic: z.string().trim().min(2).max(120) });
 
-export function createApp({ banidb, llm, library, news, wikipedia, allowedOrigins = [], aiRequestsPerMinute = 10 }: AppDeps) {
+export function createApp({ banidb, llm, library, news, wikipedia, editions, allowedOrigins = [], aiRequestsPerMinute = 10 }: AppDeps) {
   const app = new Hono();
 
   app.use("/v1/*", cors({ origin: allowedOrigins, allowMethods: ["GET", "POST"] }));
@@ -135,6 +143,20 @@ export function createApp({ banidb, llm, library, news, wikipedia, allowedOrigin
     if (!article) return c.json({ error: "not_found" }, 404);
     c.header("cache-control", "public, max-age=3600");
     return c.json(article);
+  });
+
+  // The magazine: the latest issue, an issue by date, and the list of back issues.
+  app.get("/v1/editions", async (c) => {
+    c.header("cache-control", "public, max-age=600");
+    return c.json({ editions: editions ? await editions.list() : [] });
+  });
+  app.get("/v1/editions/:date", async (c) => {
+    const date = c.req.param("date");
+    if (date !== "latest" && !/^\d{4}-\d{2}-\d{2}$/.test(date)) return c.json({ error: "not_found" }, 404);
+    const edition = editions ? await (date === "latest" ? editions.latest() : editions.get(date)) : null;
+    if (!edition) return c.json({ error: "not_found" }, 404);
+    c.header("cache-control", "public, max-age=600");
+    return c.json(edition);
   });
 
   app.get("/v1/news/briefing", async (c) => {

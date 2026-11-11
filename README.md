@@ -88,6 +88,17 @@ The site runs with no server of its own, the same way as a scheduled bot. `.gith
 2. It runs `scripts/build-news.ts`, which fetches the feeds, has the model rate and summarise the stories, writes the edition note and the opening paragraphs of the good stories, and saves them as JSON next to the site. What earlier runs worked out is kept in the Actions cache, so each story is rated and summarised once.
 3. It publishes the site to GitHub Pages at `https://<user>.github.io/<repo>/`.
 
+### The daily magazine
+
+The home page is a digital magazine, written by AI once a day. The first hourly run after 5 a.m. New York time calls `writeEdition()` (`packages/core/src/magazine/edition.ts`):
+
+1. The editor step (Sonnet 5.5) picks a cover story, four features (at least two good news, at least one hard news) and 6-8 briefs from the last three days' rated stories.
+2. For each article it reads the publishers' full pages and writes from them alone. Every paragraph cites its sources.
+3. `paragraphProblems()` checks each paragraph against the sources it cites: every number must be in them, every quotation word for word, and no run of 14 words copied without quotation marks. A failing article is rewritten once with the problems listed; paragraphs that still fail are dropped, and an article with fewer than two left is dropped.
+4. The issue is saved to `.editions/` (kept between runs in the Actions cache, with every back issue) and published with the site. Each article says it was written by AI and lists and links its sources. An issue costs about $0.20.
+
+To write today's issue again, run the workflow by hand with "Write today's magazine issue again now" ticked. Locally: `FORCE_EDITION=1 npx tsx --env-file-if-exists=.env scripts/build-news.ts <out> .news-memory.json .editions`; the dev API serves `.editions/`.
+
 In the published site (`EXPO_PUBLIC_STATIC=1`) the app answers its own API requests (`apps/sikhe/src/lib/local-api.ts`): Gurbani, the Hukamnama and history come straight from BaniDB and Wikipedia, and the news from the job's files. Ask needs the model key, which can't be in a website, so Ask is off there.
 
 Setup, once: add the Anthropic key as the repository secret `ANTHROPIC_API_KEY` (Settings > Secrets and variables > Actions), set Settings > Pages > Source to **GitHub Actions**, then run the workflow from the Actions tab. Pages on a private repository needs GitHub Pro.
@@ -105,6 +116,8 @@ The site is marked `noindex`, so it stays out of search engines until launch. Be
 | POST | `/v1/discuss` | `{ shabadId, question, history? }` → a reply about that shabad, citing its lines; follow-ups |
 | GET | `/v1/hukamnama/today` | Today's Hukamnama (date and shabad), cached 10 minutes |
 | GET | `/v1/angs/:ang` | The shabads on an Ang (1-1430), each with its heading and first line |
+| GET | `/v1/editions` | The magazine's issues, newest first |
+| GET | `/v1/editions/:date` | One issue (`latest`, or YYYY-MM-DD): cover story, features, briefs, each article's sources |
 
 The server stores no conversations; clients send earlier turns in `history`.
 AI endpoints are rate limited per client (`AI_REQUESTS_PER_MINUTE`, default 10).

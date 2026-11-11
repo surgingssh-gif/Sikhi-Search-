@@ -382,3 +382,25 @@ describe("Sikh history from Wikipedia", () => {
     expect((await app.request("/v1/history/article?title=Nowhere")).status).toBe(404);
   });
 });
+
+describe("Magazine routes", () => {
+  const edition = { date: "2026-11-11", issue: 1, generatedAt: "2026-11-11T10:00:00.000Z", articles: [], briefs: [], costUsd: 0.5 };
+  const editions = {
+    latest: async () => edition,
+    get: async (date: string) => (date === edition.date ? edition : null),
+    list: async () => [{ date: edition.date, issue: 1, headline: "A cover story" }],
+  };
+  const app = createApp({ banidb: banidbWith(async () => shabad), editions });
+
+  it("serves the latest issue, an issue by date, and the list", async () => {
+    expect(await (await app.request("/v1/editions/latest")).json()).toMatchObject({ issue: 1 });
+    expect((await app.request("/v1/editions/2026-11-11")).status).toBe(200);
+    expect((await app.request("/v1/editions/2026-11-10")).status).toBe(404);
+    expect((await app.request("/v1/editions/../secrets")).status).toBe(404);
+    expect(await (await app.request("/v1/editions")).json()).toEqual({ editions: [{ date: "2026-11-11", issue: 1, headline: "A cover story" }] });
+  });
+  it("has no issue without a store", async () => {
+    const bare = createApp({ banidb: banidbWith(async () => shabad) });
+    expect((await bare.request("/v1/editions/latest")).status).toBe(404);
+  });
+});

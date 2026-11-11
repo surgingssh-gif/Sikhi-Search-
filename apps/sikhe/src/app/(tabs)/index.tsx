@@ -1,16 +1,17 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, router } from "expo-router";
-import { useState } from "react";
-import { Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
+import { useRef, useState } from "react";
+import { Pressable, StyleSheet, useWindowDimensions, View, type ScrollViewInstance } from "react-native";
 import { EditionNote } from "@/components/BriefingCard";
 import { CalendarEventRow } from "@/components/CalendarEventRow";
 import { EventRow } from "@/components/History";
 import { HukamnamaCard } from "@/components/HukamnamaCard";
+import { BackIssues, Magazine } from "@/components/Magazine";
 import { Screen } from "@/components/Screen";
 import { StoryColumns, StoryHeadlines, StoryLead, StoryList } from "@/components/StoryCard";
 import { Text } from "@/components/Text";
 import { Button, Card, Divider, ErrorState, Loading, Section } from "@/components/ui";
-import { friendlyError, localDate, useCalendar, useHistoryAround, useNews } from "@/lib/api";
+import { friendlyError, localDate, useCalendar, useEdition, useHistoryAround, useNews } from "@/lib/api";
 import { whenLabel } from "@/lib/calendar";
 import { anniversaryLabel } from "@/lib/history";
 import { useArea } from "@/lib/area";
@@ -114,12 +115,50 @@ export default function TodayScreen() {
   const today = localDate(now);
   const { colors } = useTheme();
   const wide = useWindowDimensions().width >= WIDE;
+  const scrollRef = useRef<ScrollViewInstance>(null);
+  const edition = useEdition();
 
   const refresh = async () => {
     setRefreshing(true);
     await queryClient.invalidateQueries();
     setRefreshing(false);
   };
+
+  // The front page is the day's magazine; until the first issue is written, the newspaper front.
+  if (edition.isPending) {
+    return (
+      <Screen masthead>
+        <Loading label="Opening today's issue…" />
+      </Screen>
+    );
+  }
+  if (edition.data) {
+    return (
+      <Screen masthead refreshing={refreshing} onRefresh={refresh} scrollRef={scrollRef}>
+        <Magazine edition={edition.data} scrollRef={scrollRef} />
+        {/* The rest of the day, as the magazine's back pages. */}
+        <View style={{ gap: SPACE.md }}>
+          <Text variant="label">Also today</Text>
+          <View style={{ height: 3, backgroundColor: colors.rule }} />
+          <View style={wide ? styles.backPages : { gap: SPACE.xl }}>
+            <View style={wide ? { flex: 1 } : undefined}>
+              <HukamnamaCard />
+            </View>
+            <View style={wide ? { flex: 1 } : undefined}>
+              <SikhCalendar today={today} />
+            </View>
+            <View style={wide ? { flex: 1 } : undefined}>
+              <OnThisDay today={today} />
+            </View>
+          </View>
+        </View>
+        <BackIssues current={edition.data.date} />
+        <View style={{ alignItems: "center" }}>
+          <Button label="All of today's news" kind="quiet" icon="newspaper-outline" onPress={() => router.navigate("/news")} />
+        </View>
+      </Screen>
+    );
+  }
 
   return (
     <Screen masthead refreshing={refreshing} onRefresh={refresh}>
@@ -145,5 +184,6 @@ const styles = StyleSheet.create({
   front: { flexDirection: "row", alignItems: "flex-start" },
   lead: { flex: 1, gap: SPACE.xl, paddingRight: 40 },
   nearPrompt: { gap: SPACE.xs, padding: SPACE.lg, borderWidth: 1, borderRadius: 6 },
+  backPages: { flexDirection: "row", alignItems: "flex-start", gap: SPACE.xl },
   rail: { width: 330, gap: SPACE.xl, paddingLeft: 30, borderLeftWidth: 1 },
 });

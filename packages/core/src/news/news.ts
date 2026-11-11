@@ -767,8 +767,8 @@ export function articleParagraphs(html: string, max = 2): string[] {
   return out;
 }
 
-/** The opening paragraphs of the article at `url`, or none if the page can't be read. */
-export async function fetchArticleParagraphs(url: string, fetchImpl: typeof globalThis.fetch = globalThis.fetch): Promise<string[]> {
+/** The opening paragraphs of the article at `url` (two, or `max`), or none if the page can't be read. */
+export async function fetchArticleParagraphs(url: string, fetchImpl: typeof globalThis.fetch = globalThis.fetch, max = 2): Promise<string[]> {
   try {
     const res = await fetchImpl(url, {
       headers: { accept: "text/html", "user-agent": "Mozilla/5.0 (compatible; AskSikhi/0.1; +https://github.com/surgingssh-gif/Sikhi-Search-)" },
@@ -777,8 +777,8 @@ export async function fetchArticleParagraphs(url: string, fetchImpl: typeof glob
     });
     if (!res.ok || !res.body || !/html/i.test(res.headers.get("content-type") ?? "html")) return [];
     // Enough of the page for its opening paragraphs; stop after ~1.5 MB.
-    const html = await readUntil(res, (t) => (t.match(/<\/p>/gi)?.length ?? 0) > 40, 1_500_000);
-    return articleParagraphs(html);
+    const html = await readUntil(res, (t) => (t.match(/<\/p>/gi)?.length ?? 0) > 40 + max * 2, 1_500_000);
+    return articleParagraphs(html, max);
   } catch {
     return [];
   }

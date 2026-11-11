@@ -33,6 +33,7 @@ export * from "./library/research";
 export * from "./news/news";
 export * from "./news/places";
 export * from "./news/rating";
+export * from "./magazine/edition";
 export * from "./history/events";
 export * from "./calendar/jantri";
 export * from "./history/wikipedia";

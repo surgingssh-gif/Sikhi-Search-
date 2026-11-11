@@ -1,6 +1,7 @@
 # Builds and publishes Sikhe on GitHub Pages, on GitHub's computers, so it
 # works with your own computer off. Every hour it fetches the news, has the
 # model rate and summarise it, and republishes the site with the fresh news.
+# The first run after 5 a.m. New York time also writes the day's magazine.
 # A push to main republishes it straight away.
 name: Sikhe site
 
@@ -12,6 +13,11 @@ on:
     branches: [main]
   # A "Run workflow" button on the Actions tab, for publishing by hand.
   workflow_dispatch:
+    inputs:
+      new_issue:
+        description: "Write today's magazine issue again now"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -69,13 +75,29 @@ jobs:
           key: news-memory-${{ github.run_id }}
           restore-keys: news-memory-
 
-      - name: Fetch, rate and summarise the news
+      # Every issue of the magazine written so far.
+      - name: Restore the back issues
+        uses: actions/cache/restore@v4
+        with:
+          path: .editions
+          key: editions-${{ github.run_id }}
+          restore-keys: editions-
+
+      - name: Fetch, rate and summarise the news, and write the day's issue
         env:
           # The key may be saved under either name.
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY || secrets.API_KEY }}
+          FORCE_EDITION: ${{ inputs.new_issue && '1' || '' }}
         run: |
           rm -rf apps/sikhe/dist/data
-          npx tsx scripts/build-news.ts apps/sikhe/dist/data .news-memory.json
+          npx tsx scripts/build-news.ts apps/sikhe/dist/data .news-memory.json .editions
+
+      - name: Save the back issues
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .editions
+          key: editions-${{ github.run_id }}
 
       - name: Save the news memory
         if: always()

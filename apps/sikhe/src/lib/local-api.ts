@@ -1,11 +1,12 @@
 import { createApp } from "@ask-sikhi/api/app";
-import { BaniDbClient, WikipediaClient, type NewsItem } from "@ask-sikhi/core";
+import { BaniDbClient, WikipediaClient, type Edition, type EditionSummary, type NewsItem } from "@ask-sikhi/core";
 
 /**
  * The API, run inside the app, for the free hosted site where there's no
  * server. Gurbani and history come straight from BaniDB and Wikipedia, just
  * as the server would fetch them; the news comes from the files the hourly
- * job writes next to the site (see scripts/build-news.ts). There's no model
+ * job writes next to the site (see scripts/build-news.ts), and so do the
+ * magazine's issues. There's no model
  * key here, so Ask is turned off.
  */
 
@@ -32,10 +33,16 @@ const news = {
   article: (id: string) => data<{ id: string; url: string; paragraphs: string[] }>(`articles/${id}.json`),
 };
 
+const editions = {
+  latest: () => data<Edition>("editions/latest.json"),
+  get: (date: string) => data<Edition>(`editions/${date}.json`),
+  list: async () => (await data<EditionSummary[]>("editions/index.json")) ?? [],
+};
+
 let app: ReturnType<typeof createApp> | null = null;
 
 /** Answers an API request in the app, as the server would. */
 export function localRequest(path: string): Promise<Response> {
-  app ??= createApp({ banidb: new BaniDbClient(), wikipedia: new WikipediaClient(), news });
+  app ??= createApp({ banidb: new BaniDbClient(), wikipedia: new WikipediaClient(), news, editions });
   return Promise.resolve(app.request(path));
 }

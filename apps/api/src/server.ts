@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import { serve } from "@hono/node-server";
 import { AnthropicJsonLlm, BaniDbClient, NewsService, researchEntry, WikipediaClient, type BaniSummary, type ModelTier } from "@ask-sikhi/core";
 import { createApp } from "./app";
+import { FileEditionStore } from "./edition-store";
 import { FileLibraryStore } from "./library-store";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -43,6 +44,8 @@ const app = createApp({
   library,
   news,
   wikipedia: new WikipediaClient(),
+  // The magazine's issues, written by scripts/build-news.ts.
+  editions: new FileEditionStore(process.env.EDITIONS_DIR ?? path.resolve(here, "../../../.editions")),
   ...(llm ? { llm } : {}),
   ...(process.env.AI_REQUESTS_PER_MINUTE ? { aiRequestsPerMinute: Number(process.env.AI_REQUESTS_PER_MINUTE) } : {}),
 });

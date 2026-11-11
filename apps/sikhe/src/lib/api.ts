@@ -1,9 +1,9 @@
-import type { CalendarEvent, DatedHistoryEvent, Hukamnama, NanakshahiDate, NewsItem } from "@ask-sikhi/core";
+import type { CalendarEvent, DatedHistoryEvent, Edition, EditionSummary, Hukamnama, NanakshahiDate, NewsItem } from "@ask-sikhi/core";
 import { useQuery } from "@tanstack/react-query";
 import Constants from "expo-constants";
 import { Platform } from "react-native";
 
-export type { CalendarEvent, NanakshahiDate, DatedHistoryEvent, HistoryEvent, Hukamnama, NewsItem, Shabad, Verse } from "@ask-sikhi/core";
+export type { CalendarEvent, Edition, EditionArticle, EditionBrief, EditionSource, EditionSummary, NanakshahiDate, DatedHistoryEvent, HistoryEvent, Hukamnama, NewsItem, Shabad, Verse } from "@ask-sikhi/core";
 
 /**
  * Where the API lives. EXPO_PUBLIC_API_URL wins; otherwise, in development, the
@@ -80,6 +80,31 @@ export function useNews(limit = 250) {
     queryKey: ["news", limit],
     queryFn: () => getJson<{ items: NewsItem[]; fetchedAt: string | null }>(`/v1/news?limit=${limit}`),
     staleTime: 5 * 60_000,
+  });
+}
+
+/** An issue of the magazine: the latest, or one day's. Null when there is none yet. */
+export function useEdition(date = "latest") {
+  return useQuery({
+    queryKey: ["edition", date],
+    queryFn: async () => {
+      try {
+        return await getJson<Edition>(`/v1/editions/${date}`);
+      } catch (err) {
+        if (err instanceof ApiError && err.code === "not_found") return null;
+        throw err;
+      }
+    },
+    staleTime: 10 * 60_000,
+  });
+}
+
+/** Every issue of the magazine, newest first. */
+export function useEditions() {
+  return useQuery({
+    queryKey: ["editions"],
+    queryFn: async () => (await getJson<{ editions: EditionSummary[] }>("/v1/editions")).editions,
+    staleTime: 10 * 60_000,
   });
 }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { editionDate, paragraphProblems, writeEdition, type NewsItem } from "../src";
+import { alternate, editionDate, paragraphProblems, writeEdition, type NewsItem } from "../src";
 import { fakeLlm } from "./fakes";
 
 const source =
@@ -25,6 +25,15 @@ describe("paragraphProblems", () => {
   });
   it("needs a source", () => {
     expect(paragraphProblems("Something happened.", [])).toEqual(["it cites no source"]);
+  });
+});
+
+describe("alternate", () => {
+  it("alternates good and hard news after the cover, starting with the opposite", () => {
+    const f = (id: string, tone: "good" | "hard") => ({ id, tone });
+    const order = alternate([f("h1", "hard"), f("h2", "hard"), f("g1", "good"), f("g2", "good")], "hard").map((x) => x.id);
+    expect(order).toEqual(["g1", "h1", "g2", "h2"]);
+    expect(alternate([f("h1", "hard"), f("h2", "hard"), f("g1", "good")], "good").map((x) => x.id)).toEqual(["h1", "g1", "h2"]);
   });
 });
 

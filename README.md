@@ -80,6 +80,17 @@ npm run eval -- --mode explore
 
 Reports land in `evals/results/` (git-ignored) as Markdown for review.
 
+## Hosting (Render)
+
+`render.yaml` sets up two services from this repo:
+
+- **sikhe-api**: the API on the Starter plan, always on. It refreshes the news every 10 to 20 minutes whether or not anyone is reading, and keeps researched library entries on a 1 GB disk.
+- **sikhe-web**: the website, built with `npm run build:web` and served as a free static site. It finds the API through `EXPO_PUBLIC_API_URL`, which Render fills in.
+
+To set it up: on render.com choose **New > Blueprint**, pick this repo, and paste the Anthropic key into the `ANTHROPIC_API_KEY` field Render asks for. Never put the key in the repo. If Render gives the website an address other than `https://sikhe-web.onrender.com`, set `ALLOWED_ORIGINS` on sikhe-api to the real one. Every push to `main` redeploys both.
+
+The site sends `noindex` and a `robots.txt` that disallows crawling, so it stays out of search engines until launch. Before a public launch, check BaniDB's terms for showing translations, and whether showing a story's opening paragraphs in previews is acceptable.
+
 ## API (v1)
 
 | Method | Path | Description |

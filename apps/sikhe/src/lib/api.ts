@@ -11,7 +11,9 @@ export type { CalendarEvent, NanakshahiDate, DatedHistoryEvent, HistoryEvent, Hu
  * computer's network address rather than localhost.
  */
 function apiUrl(): string {
-  if (process.env.EXPO_PUBLIC_API_URL) return process.env.EXPO_PUBLIC_API_URL;
+  const configured = process.env.EXPO_PUBLIC_API_URL;
+  // A host such as Render passes a bare host name ("sikhe-api.onrender.com"): that means https.
+  if (configured) return /^https?:\/\//.test(configured) ? configured.replace(/\/$/, "") : `https://${configured}`;
   if (Platform.OS !== "web") {
     const host = Constants.expoConfig?.hostUri?.split(":")[0];
     if (host) return `http://${host}:8787`;

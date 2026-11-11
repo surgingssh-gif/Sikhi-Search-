@@ -47,6 +47,12 @@ const app = createApp({
   ...(process.env.AI_REQUESTS_PER_MINUTE ? { aiRequestsPerMinute: Number(process.env.AI_REQUESTS_PER_MINUTE) } : {}),
 });
 
+// Keep the news fresh even when nobody is reading: refresh it now and check every 10 minutes (it refetches once the 20-minute cache is stale),
+// so stories are fetched, rated and summarised before the first reader of the day arrives.
+const warm = () => void news.latest().catch((err: unknown) => console.error("News refresh failed:", err));
+warm();
+setInterval(warm, 10 * 60 * 1000).unref();
+
 serve({ fetch: app.fetch, port }, (info) => {
   console.log(`Ask Sikhi API listening on http://localhost:${info.port}`);
   console.log(llm ? `AI answers: ${llm.models.answer} (fast steps: ${llm.models.fast})` : "AI answers disabled: set ANTHROPIC_API_KEY in .env");

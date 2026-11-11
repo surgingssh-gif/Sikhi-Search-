@@ -13,7 +13,8 @@
     "typecheck": "npm run typecheck --workspaces --if-present && tsc --noEmit -p evals",
     "eval": "tsx --env-file-if-exists=.env evals/run.ts",
     "dev:web": "npm run dev -w @ask-sikhi/web",
-    "dev:app": "npm run web -w @ask-sikhi/sikhe"
+    "dev:app": "npm run web -w @ask-sikhi/sikhe",
+    "build:web": "npm run build:web -w @ask-sikhi/sikhe"
   },
   "engines": {
     "node": ">=22"

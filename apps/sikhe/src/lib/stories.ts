@@ -36,8 +36,10 @@ export function storyScore(i: Story, now = Date.now()): number {
     (i.tone === "negative" ? -2 : 0) +
     (MAJOR_OUTLET.test(i.source) ? 0.4 : 0) +
     (i.image ? 0.2 : 0) +
-    coverage(i) -
-    days * 0.2
+    coverage(i) +
+    // Fresh stories rise, so the front page turns over every day instead of holding last week's biggest story.
+    (days < 1 ? 0.8 : days < 2 ? 0.4 : 0) -
+    days * 0.45
   );
 }
 
@@ -149,10 +151,9 @@ export const NEWS_SECTIONS: NewsSection[] = [
     label: "Good news",
     blurb: "The best of today's good news from the Sikh kaum, America first.",
     stories: (items) => {
-      // Notable stories first; if a quiet day has too few, the best of the rest follow.
-      const front = capPerPlace(grouped(items.filter(isFrontPage)), 2);
-      const rest = grouped(items.filter((i) => isGoodNews(i) && !isFrontPage(i)));
-      return front.length >= 12 ? front : [...front, ...rest];
+      // All the good news in one ranking: how notable a story is counts, and so does how fresh,
+      // so today's good story can lead over last week's big one.
+      return capPerPlace(grouped(items.filter(isGoodNews)), 2);
     },
   },
   { id: "achievement", label: "Achievements", blurb: "Firsts, honours, elections and Sikhs excelling at what they do.", stories: ofKind("achievement") },

@@ -80,16 +80,19 @@ npm run eval -- --mode explore
 
 Reports land in `evals/results/` (git-ignored) as Markdown for review.
 
-## Hosting (Render)
+## Hosting (GitHub Pages, free)
 
-`render.yaml` sets up two services from this repo:
+The site runs with no server of its own, the same way as a scheduled bot. `.github/workflows/site.yml` runs on GitHub's computers every hour and on every push to `main`:
 
-- **sikhe-api**: the API on the Starter plan, always on. It refreshes the news every 10 to 20 minutes whether or not anyone is reading, and keeps researched library entries on a 1 GB disk.
-- **sikhe-web**: the website, built with `npm run build:web` and served as a free static site. It finds the API through `EXPO_PUBLIC_API_URL`, which Render fills in.
+1. It builds the website (only when the code changed; otherwise it reuses the last build).
+2. It runs `scripts/build-news.ts`, which fetches the feeds, has the model rate and summarise the stories, writes the edition note and the opening paragraphs of the good stories, and saves them as JSON next to the site. What earlier runs worked out is kept in the Actions cache, so each story is rated and summarised once.
+3. It publishes the site to GitHub Pages at `https://<user>.github.io/<repo>/`.
 
-To set it up: on render.com choose **New > Blueprint**, pick this repo, and paste the Anthropic key into the `ANTHROPIC_API_KEY` field Render asks for. Never put the key in the repo. If Render gives the website an address other than `https://sikhe-web.onrender.com`, set `ALLOWED_ORIGINS` on sikhe-api to the real one. Every push to `main` redeploys both.
+In the published site (`EXPO_PUBLIC_STATIC=1`) the app answers its own API requests (`apps/sikhe/src/lib/local-api.ts`): Gurbani, the Hukamnama and history come straight from BaniDB and Wikipedia, and the news from the job's files. Ask needs the model key, which can't be in a website, so Ask is off there.
 
-The site sends `noindex` and a `robots.txt` that disallows crawling, so it stays out of search engines until launch. Before a public launch, check BaniDB's terms for showing translations, and whether showing a story's opening paragraphs in previews is acceptable.
+Setup, once: add the Anthropic key as the repository secret `ANTHROPIC_API_KEY` (Settings > Secrets and variables > Actions), set Settings > Pages > Source to **GitHub Actions**, then run the workflow from the Actions tab. Pages on a private repository needs GitHub Pro.
+
+The site is marked `noindex`, so it stays out of search engines until launch. Before a public launch, check BaniDB's terms for showing translations, and whether showing a story's opening paragraphs in previews is acceptable.
 
 ## API (v1)
 

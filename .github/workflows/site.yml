@@ -1,0 +1,100 @@
+# Builds and publishes Sikhe on GitHub Pages, on GitHub's computers, so it
+# works with your own computer off. Every hour it fetches the news, has the
+# model rate and summarise it, and republishes the site with the fresh news.
+# A push to main republishes it straight away.
+name: Sikhe site
+
+on:
+  schedule:
+    # Every hour at 17 past. GitHub sometimes starts scheduled runs late.
+    - cron: "17 * * * *"
+  push:
+    branches: [main]
+  # A "Run workflow" button on the Actions tab, for publishing by hand.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One publish at a time; a newer run waits for the one in progress.
+concurrency:
+  group: sikhe-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # The site is served from https://<user>.github.io/<repo>/.
+      EXPO_PUBLIC_BASE_URL: /${{ github.event.repository.name }}
+      EXPO_PUBLIC_STATIC: "1"
+    steps:
+      - name: Download the code
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      # The app only changes when its code does, so an hourly news run reuses the last build.
+      - name: Reuse the last website build
+        id: site-cache
+        uses: actions/cache@v4
+        with:
+          path: apps/sikhe/dist
+          key: site-${{ hashFiles('apps/sikhe/**', 'apps/api/src/**', 'packages/core/src/**', 'package-lock.json', '!apps/sikhe/dist/**') }}
+
+      - name: Build the website
+        if: steps.site-cache.outputs.cache-hit != 'true'
+        run: |
+          npm run build:web
+          # Kept out of search engines until launch.
+          sed -i 's|<head>|<head><meta name="robots" content="noindex, nofollow">|' apps/sikhe/dist/index.html
+          # Pages has no rewrites; serving the app for unknown paths makes links like /news work.
+          cp apps/sikhe/dist/index.html apps/sikhe/dist/404.html
+
+      # What earlier runs worked out (ratings, summaries, links), so each story is only paid for once.
+      - name: Restore the news memory
+        uses: actions/cache/restore@v4
+        with:
+          path: .news-memory.json
+          key: news-memory-${{ github.run_id }}
+          restore-keys: news-memory-
+
+      - name: Fetch, rate and summarise the news
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          rm -rf apps/sikhe/dist/data
+          npx tsx scripts/build-news.ts apps/sikhe/dist/data .news-memory.json
+
+      - name: Save the news memory
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .news-memory.json
+          key: news-memory-${{ github.run_id }}
+
+      - name: Package the site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/sikhe/dist
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publish to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -204,7 +204,8 @@ export class WikipediaClient {
   private readonly cache = new Map<string, { expires: number; value: unknown }>();
 
   constructor(options: WikipediaClientOptions = {}) {
-    this.fetchImpl = options.fetch ?? globalThis.fetch;
+    // Bound, because a browser refuses fetch called as a method of another object.
+    this.fetchImpl = options.fetch ?? globalThis.fetch.bind(globalThis);
     this.userAgent = options.userAgent ?? "Sikhe/0.1 (Sikh news, Gurbani and history app)";
     this.ttl = options.cacheTtlMs ?? 24 * 60 * 60 * 1000;
     this.maxEntries = options.maxCacheEntries ?? 500;
@@ -280,7 +281,8 @@ export class WikipediaClient {
   }
 
   private async get<T>(params: Record<string, string>): Promise<T> {
-    const search = new URLSearchParams({ action: "query", format: "json", formatversion: "2", ...params });
+    // origin=* lets a browser call Wikipedia directly, without credentials.
+    const search = new URLSearchParams({ action: "query", format: "json", formatversion: "2", origin: "*", ...params });
     const url = `https://en.wikipedia.org/w/api.php?${search}`;
     const hit = this.cache.get(url);
     if (hit && hit.expires > Date.now()) return hit.value as T;

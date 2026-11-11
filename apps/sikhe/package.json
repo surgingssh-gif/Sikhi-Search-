@@ -13,6 +13,7 @@
     "build:web": "expo export --platform web"
   },
   "dependencies": {
+    "@ask-sikhi/api": "*",
     "@expo-google-fonts/libre-franklin": "^0.4.2",
     "@expo-google-fonts/noto-serif-gurmukhi": "^0.4.1",
     "@expo-google-fonts/playfair-display": "^0.4.2",

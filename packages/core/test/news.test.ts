@@ -118,6 +118,22 @@ describe("NewsService", () => {
   });
 });
 
+describe("NewsService memory", () => {
+  it("carries what one run worked out into the next", () => {
+    const memory = {
+      ratings: [["a", { interest: 3, tone: "uplifting", kind: "achievement", appeal: 3, america: true, duplicateOf: null }]],
+      summaries: [["a", { summary: "A first.", event: "a-first" }]],
+      resolved: [],
+      previewImages: [],
+      articles: [["a", { url: "https://example.org/a", paragraphs: ["One."] }]],
+    } as unknown as ConstructorParameters<typeof NewsService>[0] extends infer O ? NonNullable<O> extends { memory?: infer M } ? M : never : never;
+    const next = new NewsService({ feeds: [], memory }).memory();
+    expect(next.ratings).toEqual(memory!.ratings);
+    expect(next.summaries).toEqual(memory!.summaries);
+    expect(next.articles).toEqual(memory!.articles);
+  });
+});
+
 describe("guessRating", () => {
   const sikh = { panthic: true, sikhOutlet: false };
   it("rates good news about Sikhs in America highest", () => {

@@ -54,7 +54,8 @@ export class BaniDbClient {
 
   constructor(options: BaniDbClientOptions = {}) {
     this.baseUrl = (options.baseUrl ?? "https://api.banidb.com/v2").replace(/\/+$/, "");
-    this.fetchImpl = options.fetch ?? globalThis.fetch;
+    // Bound, because a browser refuses fetch called as a method of another object.
+    this.fetchImpl = options.fetch ?? globalThis.fetch.bind(globalThis);
     this.timeoutMs = options.timeoutMs ?? 10_000;
     this.cacheTtlMs = options.cacheTtlMs ?? 24 * 60 * 60 * 1000;
     this.maxCacheEntries = options.maxCacheEntries ?? 500;

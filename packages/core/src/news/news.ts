@@ -205,7 +205,25 @@ export interface NewsServiceOptions {
   maxLinkResolves?: number;
   /** How many stories to write summaries for per refresh. 0 turns it off. */
   maxSummaries?: number;
+  /** What an earlier run already worked out (from `memory()`), so it isn't paid for twice. */
+  memory?: NewsMemory;
 }
+
+/**
+ * Everything the news service has worked out about stories: the model's
+ * ratings and summaries, publisher links, photos and article openings. Saved
+ * between runs of the hourly job so each story is rated and summarised once.
+ */
+export interface NewsMemory {
+  ratings: [string, ModelRating][];
+  summaries: [string, StorySummary][];
+  resolved: [string, { url: string; image: string | null; description: string } | null][];
+  previewImages: [string, string | null][];
+  articles: [string, { url: string; paragraphs: string[] }][];
+}
+
+/** How many of each kind of entry the memory keeps, newest last. */
+const MEMORY_MAX = 3000;
 
 export interface NewsBriefing {
   generatedAt: string;
@@ -250,12 +268,33 @@ export class NewsService {
 
   constructor(private readonly options: NewsServiceOptions = {}) {
     this.feeds = options.feeds ?? DEFAULT_FEEDS;
-    this.fetchImpl = options.fetch ?? globalThis.fetch;
+    // Bound, because a browser refuses fetch called as a method of another object.
+    this.fetchImpl = options.fetch ?? globalThis.fetch.bind(globalThis);
     this.ttlMs = options.ttlMs ?? 20 * 60 * 1000;
     this.now = options.now ?? Date.now;
+    const m = options.memory;
+    if (m) {
+      for (const [k, v] of m.ratings ?? []) this.ratings.set(k, v);
+      for (const [k, v] of m.summaries ?? []) this.summaries.set(k, v);
+      for (const [k, v] of m.resolved ?? []) this.resolved.set(k, v);
+      for (const [k, v] of m.previewImages ?? []) this.previewImages.set(k, v);
+      for (const [k, v] of m.articles ?? []) this.articles.set(k, v);
+    }
   }
 
-  private articles = new Map<string, { url: string; paragraphs: string[] }>();
+  /** What this service has worked out so far, to pass as `memory` next time. */
+  memory(): NewsMemory {
+    const last = <K, V>(map: Map<K, V>): [K, V][] => [...map].slice(-MEMORY_MAX);
+    return {
+      ratings: last(this.ratings),
+      summaries: last(this.summaries),
+      resolved: last(this.resolved),
+      previewImages: last(this.previewImages),
+      articles: last(this.articles),
+    };
+  }
+
+  private readonly articles = new Map<string, { url: string; paragraphs: string[] }>();
 
   /**
    * The opening of one story, for its preview. Only stories in the current

@@ -46,10 +46,13 @@ export function friendlyError(err: unknown): string {
   return FRIENDLY.network!;
 }
 
+/** On the free hosted site there's no server: the app answers its own API requests (see local-api). */
+export const STATIC = process.env.EXPO_PUBLIC_STATIC === "1";
+
 export async function getJson<T>(path: string): Promise<T> {
   let res: Response;
   try {
-    res = await fetch(`${API_URL}${path}`);
+    res = STATIC ? await (await import("./local-api")).localRequest(path) : await fetch(`${API_URL}${path}`);
   } catch {
     throw new ApiError("network");
   }

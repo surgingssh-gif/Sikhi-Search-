@@ -151,7 +151,7 @@ export function Footer() {
         Sikhe is a learning guide, not a Granthi or a religious authority.
       </Text>
       <Text variant="meta" color="inkFaint" style={{ textAlign: "center", marginTop: 6 }}>
-        Good news from the Sikh kaum · Gurbani from BaniDB by Khalis Foundation · History from Wikipedia (CC BY-SA) · News from its publishers
+        News of the Sikh kaum · Gurbani from BaniDB by Khalis Foundation · History from Wikipedia (CC BY-SA) · News from its publishers
       </Text>
     </View>
   );

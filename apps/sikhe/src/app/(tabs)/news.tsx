@@ -90,12 +90,12 @@ export default function NewsScreen() {
   const [shown, setShown] = useState(PAGE);
   const [refreshing, setRefreshing] = useState(false);
 
-  // With an area chosen, "Near you" comes right after the good news.
+  // With an area chosen, "Near you" comes right after the top stories and the good news.
   const { area } = useArea();
-  const sections = area ? [NEWS_SECTIONS[0]!, nearSection(area), ...NEWS_SECTIONS.slice(1)] : NEWS_SECTIONS;
+  const sections = area ? [...NEWS_SECTIONS.slice(0, 2), nearSection(area), ...NEWS_SECTIONS.slice(2)] : NEWS_SECTIONS;
   const section = sections.find((s) => s.id === sectionId) ?? sections[0]!;
   // The newest-first sections keep strict order, split by day.
-  const latest = sectionId === "latest" || sectionId === "panth";
+  const latest = sectionId === "latest";
   const stories = data ? section.stories(data.items) : [];
   // The front: the best story leads, a column of headlines beside it, a row of three under it.
   // The newest-first sections are just the list.
@@ -169,7 +169,7 @@ export default function NewsScreen() {
           {river.length > 0 && (
             <View style={{ gap: SPACE.sm }}>
               {!latest && <SectionHeader title="More stories" />}
-              <River items={river.slice(0, shown)} byDay={latest || sectionId === "panth"} />
+              <River items={river.slice(0, shown)} byDay={latest} />
               {river.length > shown && (
                 <Pressable onPress={() => setShown(shown + PAGE)} accessibilityRole="button" style={StyleSheet.flatten([styles.more, { borderColor: colors.ink }])}>
                   <Text variant="meta" color="ink" style={styles.pillText}>
@@ -180,7 +180,7 @@ export default function NewsScreen() {
             </View>
           )}
           <Text variant="meta" color="inkFaint">
-            From Sikh outlets, Google News and local papers. Each story is sorted by AI into a kind of good news; crime, hate, disputes and politics stay out of the good news, in Panth news only.
+            From Sikh outlets, Google News and local papers. AI sorts each story into a section and writes its summary from the publisher's own description; on hard news, Sikh outlets' reporting leads. Tap a story for its opening and a link to the full article.
           </Text>
         </>
       )}

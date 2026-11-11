@@ -69,7 +69,7 @@ export default function SettingsScreen() {
       </Section>
 
       <Section title="Near you">
-        <Text variant="small">Choose your area for a section of good news from your own Sangat. It is kept on this device only.</Text>
+        <Text variant="small">Choose your area for a section of news from your own Sangat. It is kept on this device only.</Text>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: SPACE.sm }}>
           <Chip label="None" active={!area} onPress={() => setArea(null)} />
           {AREAS.map((a) => (

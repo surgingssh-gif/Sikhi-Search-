@@ -58,13 +58,13 @@ function TopStories({ wide }: { wide: boolean }) {
       {across.length > 0 && <StoryColumns items={across} />}
       {list.length > 0 && <StoryList items={list} />}
       <View style={{ alignItems: "center" }}>
-        <Button label="More good news" kind="quiet" icon="newspaper-outline" onPress={() => router.navigate("/news")} />
+        <Button label="More news" kind="quiet" icon="newspaper-outline" onPress={() => router.navigate("/news")} />
       </View>
     </View>
   );
 }
 
-/** Good news from the reader's own area, or an invitation to choose one. */
+/** News from the reader's own area, or an invitation to choose one. */
 function NearYou() {
   const { colors } = useTheme();
   const { area } = useArea();
@@ -74,7 +74,7 @@ function NearYou() {
       <Link href="/settings" asChild>
         <Pressable accessibilityRole="link" style={StyleSheet.flatten([styles.nearPrompt, { borderColor: colors.line }])}>
           <Text variant="label">Near you</Text>
-          <Text variant="small">See the good news from your own Sangat.</Text>
+          <Text variant="small">See the news from your own Sangat.</Text>
           <Text variant="button" color="accentInk">
             Choose your area ›
           </Text>
@@ -126,7 +126,7 @@ export default function TodayScreen() {
       {/* The front page: the news leads, and beside it on wide screens a rail with the Hukamnama and the dates. */}
       <View style={wide ? styles.front : { gap: SPACE.xl }}>
         <View style={wide ? styles.lead : { gap: SPACE.xl }}>
-          <Section title="Good news" href="/news" more="All news">
+          <Section title="Top stories" href="/news" more="All news">
             <TopStories wide={wide} />
           </Section>
         </View>

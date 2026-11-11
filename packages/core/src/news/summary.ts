@@ -2,8 +2,8 @@ import { z } from "zod";
 import type { JsonLlm } from "../ai/llm";
 
 /**
- * A short summary for each good-news story: what happened, and why it matters
- * to the kaum. Written by the fast model from the headline and the
+ * A short summary for each story, good or hard: what happened, and what it
+ * means for the kaum. Written by the fast model from the headline and the
  * publisher's own description, never from anything else.
  */
 
@@ -17,10 +17,12 @@ const SummariesSchema = z.object({
   ),
 });
 
-const SUMMARY_SYSTEM = `You write the short summaries under headlines for Sikhe, a home for the good news of the Sikh kaum, read by Sikhs outside India, most of all Sikh Americans.
-For each story you are given the outlet, the headline and, when there is one, the publisher's own description. Write one or two plain sentences, at most 40 words: what happened, and why it matters to Sikhs.
+const SUMMARY_SYSTEM = `You write the short summaries under headlines for Sikhe, the news of the Sikh kaum, good and hard. Its readers are Sikhs outside India, most of all Sikh Americans, and many of them support Khalistan and Sikh self-determination.
+For each story you are given the outlet, the headline and, when there is one, the publisher's own description. Write one or two plain sentences, at most 40 words: what happened, and what it means for Sikhs.
 - Use only what the headline and description say. Never add names, numbers, places, dates or causes they don't give. If they say little, say little.
-- Plain and warm, like a good local paper. No hype: no "historic" or "inspiring" unless the source says so. No exclamation marks.
+- Tell the story from the Sikh community's side, but keep to the facts. Attribute contested claims to whoever makes them ("Indian officials allege", "police say", "the family says"). Words like "terrorist", "extremist" or "radical" are only ever someone's claim: attribute them or leave them out.
+- Never praise violence or armed groups. Report violence plainly and calmly, with no graphic detail.
+- Plain and steady, like a serious local paper. No hype or outrage: no "historic", "shocking" or "inspiring" unless the source says so. No exclamation marks.
 - Don't repeat the headline word for word, and don't start with "This story" or "The article".
 - Use the respect Sikhs use: Guru Nanak Dev Ji, Sri Guru Granth Sahib Ji, gurdwara, langar, seva.
 - Also give each story an event slug, a few lowercase words joined by hyphens naming what happened ("jyot-singh-georgia-assembly", "lahore-gurdwara-reopens"). Stories about the same event, even with very different headlines, get exactly the same slug.

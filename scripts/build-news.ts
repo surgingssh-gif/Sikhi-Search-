@@ -1,7 +1,7 @@
 /**
  * The hourly news job. Fetches the feeds, has the model rate and summarise
  * the stories, writes today's edition note and the opening paragraphs of the
- * good stories, and saves it all as JSON files the website reads. Runs on
+ * main stories, and saves it all as JSON files the website reads. Runs on
  * GitHub's computers (see .github/workflows/site.yml), so the news stays
  * fresh with no server of our own.
  *
@@ -10,7 +10,7 @@
  */
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { AnthropicJsonLlm, NewsService, type NewsMemory } from "@ask-sikhi/core";
+import { AnthropicJsonLlm, isNews, NewsService, type NewsMemory } from "@ask-sikhi/core";
 
 const [outDir, memoryFile = ".news-memory.json"] = process.argv.slice(2);
 if (!outDir) {
@@ -18,8 +18,8 @@ if (!outDir) {
   process.exit(1);
 }
 
-/** How many good stories get their opening paragraphs fetched for the preview. */
-const PREVIEWS = 80;
+/** How many stories get their opening paragraphs fetched for the preview. */
+const PREVIEWS = 120;
 
 async function readMemory(): Promise<NewsMemory | undefined> {
   try {
@@ -56,9 +56,9 @@ if (llm) {
   }
 }
 
-// Opening paragraphs for the best good stories, a few pages at a time. Remembered stories aren't fetched again.
+// Opening paragraphs for the most important stories, a few pages at a time. Remembered stories aren't fetched again.
 const good = items
-  .filter((i) => i.kind !== null && i.tone !== "negative")
+  .filter(isNews)
   .sort((a, b) => b.appeal - a.appeal || b.interest - a.interest)
   .slice(0, PREVIEWS);
 let next = 0;
@@ -74,7 +74,7 @@ await Promise.all(
     }
   }),
 );
-console.log(`Opening paragraphs for ${found} of ${good.length} good stories.`);
+console.log(`Opening paragraphs for ${found} of ${good.length} stories.`);
 
 await writeFile(memoryFile, JSON.stringify(news.memory()));
 console.log(`Saved the news to ${outDir}.`);

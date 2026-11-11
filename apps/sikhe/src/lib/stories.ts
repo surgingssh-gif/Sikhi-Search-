@@ -15,26 +15,28 @@ export const isGoodNews = (i: NewsItem) => i.tone === "uplifting" && i.kind !== 
 export const isFrontPage = (i: NewsItem) => isGoodNews(i) && (i.appeal ?? 1) >= 2;
 /** Good news, or friendly everyday community news. */
 export const isFriendly = (i: NewsItem) => i.tone !== "negative" && i.kind !== null && recent(i);
-/** The harder news of the Panth: justice, disputes and dealings with governments. Kept apart from the good news. */
-export const isHardNews = (i: NewsItem) => i.categories.includes("panth") && i.kind === null && i.interest >= 1;
+/** Hard news our readers want: rights, justice, the Khalistan movement and Punjab. */
+export const isHardNews = (i: NewsItem) => (i.beat ?? null) !== null && i.interest >= 1 && recent(i);
+/** Everything the front page draws on: the good news and the hard news. */
+export const isTopNews = (i: NewsItem) => isGoodNews(i) || isHardNews(i);
+/** Good, community and hard news: every story worth a reader's time. */
+export const isAnyNews = (i: NewsItem) => isFriendly(i) || isHardNews(i);
 
 /** Outlets with real newsrooms, whose stories tend to have the most substance. */
 const MAJOR_OUTLET =
   /\b(associated press|ap news|new york times|washington post|nbc|cbs|abc news|npr|cnn|usa today|los angeles times|san francisco chronicle|reuters|pbs|time|bbc|guardian|independent|cbc|globe and mail|toronto star|ctv|abc \(australia\)|sbs)\b/i;
 
 /**
- * How high a story goes: how notable it is above all, then how much a Sikh in
- * America wants it, good news, a real newsroom and freshness. A day's age
- * costs a fifth of a level of appeal.
+ * How high a story goes: how important it is above all, good news or bad, then
+ * how much our readers want it, a trusted newsroom and freshness.
  */
 export function storyScore(i: Story, now = Date.now()): number {
   const days = i.publishedAt ? Math.max(0, (now - new Date(i.publishedAt).getTime()) / 86_400_000) : 7;
   return (
     (i.appeal ?? 1) * 1.2 +
     i.interest * 0.5 +
-    (i.tone === "uplifting" ? 0.3 : 0) +
-    (i.tone === "negative" ? -2 : 0) +
-    (MAJOR_OUTLET.test(i.source) ? 0.4 : 0) +
+    (i.tone === "uplifting" ? 0.2 : 0) +
+    (MAJOR_OUTLET.test(i.source) || SIKH_OUTLET.test(i.source) ? 0.4 : 0) +
     (i.image ? 0.2 : 0) +
     coverage(i) +
     // Fresh stories rise, so the front page turns over every day instead of holding last week's biggest story.
@@ -57,12 +59,26 @@ const wordsOf = (title: string) => new Set(title.toLowerCase().replace(/[^a-z0-9
 /** A story, with the other outlets that covered the same event. */
 export type Story = NewsItem & { also?: string[] };
 
-/** Aggregators and rewrite sites: fine to mention, but the paper that reported the story should lead. */
-const AGGREGATOR = /\b(inshorts|msn|yahoo|newsbreak|dailyhunt|latestly|babushahi|zee|news18|india tv|ommcom|devdiscourse)\b/i;
+/**
+ * Aggregators, rewrite sites and Indian TV channels and outlets that repeat the
+ * Indian government's line on Sikhs: fine to list under "also covered by",
+ * but another outlet's version should lead.
+ */
+const AGGREGATOR = /\b(inshorts|msn|yahoo|newsbreak|dailyhunt|latestly|babushahi|zee|news18|india tv|ommcom|devdiscourse|republic|times now|opindia|organiser|wion|firstpost|ani|ians)\b/i;
 
-/** Which outlet's version of a story to show: a real newsroom, then one with a summary and a photo. */
+/** Sikh outlets, which tell the community's side of a story. */
+const SIKH_OUTLET = /\b(sikh24|sikh siyasat|khalsa vox|sikh coalition|saldef|sikh press association|united sikhs|world sikh organization|sikh federation|sikh foundation|baaz|sikh news network|jaago)\b/i;
+
+/** Which outlet's version of a story to show: a real newsroom or a Sikh outlet, then one with a summary and a photo. */
 function sourceRank(i: NewsItem): number {
-  return (MAJOR_OUTLET.test(i.source) ? 2 : 0) - (AGGREGATOR.test(i.source) ? 2 : 0) + (i.summary ? 0.5 : 0) + (i.image ? 0.5 : 0);
+  return (
+    (MAJOR_OUTLET.test(i.source) ? 2 : 0) +
+    // On hard news, the community's own reporting leads.
+    (SIKH_OUTLET.test(i.source) ? (i.beat ? 2.5 : 1) : 0) -
+    (AGGREGATOR.test(i.source) ? 2 : 0) +
+    (i.summary ? 0.5 : 0) +
+    (i.image ? 0.5 : 0)
+  );
 }
 
 /**
@@ -140,44 +156,48 @@ export interface NewsSection {
 const grouped = (items: NewsItem[]) => ranked(dedupe(ranked(items)));
 
 const ofKind = (kind: NonNullable<NewsItem["kind"]>) => (items: NewsItem[]) => grouped(items.filter((i) => isFriendly(i) && i.kind === kind));
+const onBeat = (beat: NonNullable<NewsItem["beat"]>) => (items: NewsItem[]) => grouped(items.filter((i) => isHardNews(i) && i.beat === beat));
 
 /**
- * The news, by kind of good news. "Good news" leads everywhere; the harder
- * news of the Panth has its own clearly labelled section at the end.
+ * The news. "Top stories" ranks the good news and the hard news together, by
+ * how much they matter; "Good news" keeps only the good. Then the beats of
+ * hard news, then the kinds of good news.
  */
 export const NEWS_SECTIONS: NewsSection[] = [
   {
     id: "top",
-    label: "Good news",
-    blurb: "The best of today's good news from the Sikh kaum, America first.",
-    stories: (items) => {
-      // All the good news in one ranking: how notable a story is counts, and so does how fresh,
-      // so today's good story can lead over last week's big one.
-      return capPerPlace(grouped(items.filter(isGoodNews)), 2);
-    },
+    label: "Top stories",
+    blurb: "What matters most to the Sikh kaum today, good news and hard news.",
+    // One ranking: how important a story is counts, and so does how fresh,
+    // so today's story can lead over last week's big one.
+    stories: (items) => capPerPlace(grouped(items.filter(isTopNews)), 2),
   },
+  {
+    id: "good",
+    label: "Good news",
+    blurb: "Only the good news: achievements, seva, celebrations, heritage and young Sikhs.",
+    stories: (items) => capPerPlace(grouped(items.filter(isGoodNews)), 2),
+  },
+  { id: "khalistan", label: "Khalistan", blurb: "The movement, referendums, diaspora activism, and governments' dealings with Sikhs.", stories: onBeat("khalistan") },
+  { id: "justice", label: "Justice", blurb: "1984, Bandi Singhs and political prisoners, transnational repression, and the cases of Sikh activists.", stories: onBeat("justice") },
+  { id: "rights", label: "Rights", blurb: "Hate crimes, discrimination, attacks on Sikhs and gurdwaras, and the turban and kirpan.", stories: onBeat("rights") },
+  { id: "punjab", label: "Punjab", blurb: "Farmers, water, drugs, migration, and the SGPC and Akal Takht.", stories: onBeat("punjab") },
   { id: "achievement", label: "Achievements", blurb: "Firsts, honours, elections and Sikhs excelling at what they do.", stories: ofKind("achievement") },
   { id: "seva", label: "Seva", blurb: "Langar, relief, charity and Sikhs serving their neighbours.", stories: ofKind("seva") },
   { id: "celebration", label: "Celebrations", blurb: "Gurpurabs, nagar kirtans, Vaisakhi, Bandi Chhor and festivals.", stories: ofKind("celebration") },
   { id: "heritage", label: "Heritage", blurb: "Gurdwaras restored, Sikh history, museums, books and films.", stories: ofKind("heritage") },
   { id: "youth", label: "Youth", blurb: "Students, scholarships, sport, gatka and young Sikhs.", stories: ofKind("youth") },
   { id: "community", label: "Community", blurb: "Everyday news from gurdwaras and sangats: open days, new gurdwaras, interfaith visits.", stories: ofKind("community") },
-  { id: "latest", label: "Latest", blurb: "All the good and community news, newest first.", stories: (items) => dedupe(newest(items.filter(isFriendly))) },
-  {
-    id: "panth",
-    label: "Panth news",
-    blurb: "The harder news: justice, remembrance, disputes and the Panth's dealings with governments. Kept apart from the good news.",
-    stories: (items) => dedupe(newest(items.filter(isHardNews))),
-  },
+  { id: "latest", label: "Latest", blurb: "All the news, newest first.", stories: (items) => dedupe(newest(items.filter(isAnyNews))) },
 ];
 
-/** Good and community news from the reader's area, best first. */
+/** The news from the reader's area, best first. */
 export function nearSection(area: Area): NewsSection {
   return {
     id: "near",
     label: "Near you",
-    blurb: `Good news from Sikhs in ${area.label}: ${area.towns}.`,
-    stories: (items) => grouped(items.filter((i) => isFriendly(i) && isNear(i, area))),
+    blurb: `News from Sikhs in ${area.label}: ${area.towns}.`,
+    stories: (items) => grouped(items.filter((i) => isAnyNews(i) && isNear(i, area))),
   };
 }
 

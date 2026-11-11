@@ -8,7 +8,7 @@ import { StoryMap, type StoryMapProps } from "@/components/StoryMap";
 import { Text } from "@/components/Text";
 import { Chip, Divider, ErrorState, Loading } from "@/components/ui";
 import { friendlyError, useNews } from "@/lib/api";
-import { isFriendly, MAP_REGIONS, newest, pinsFor } from "@/lib/stories";
+import { isAnyNews, MAP_REGIONS, newest, pinsFor } from "@/lib/stories";
 import { useTheme } from "@/theme/theme";
 import { RADIUS, SPACE, WIDE } from "@/theme/tokens";
 
@@ -24,7 +24,7 @@ export default function MapScreen() {
 
   // Stories worth a reader's time (no crime or Indian politics); American places first, then the busiest elsewhere.
   const pins = useMemo(() => {
-    const all = pinsFor(newest((data?.items ?? []).filter(isFriendly)));
+    const all = pinsFor(newest((data?.items ?? []).filter(isAnyNews)));
     return [...all.filter((p) => p.region === "United States"), ...all.filter((p) => p.region !== "United States")];
   }, [data]);
   const pin = pins.find((p) => p.name === selected) ?? null;

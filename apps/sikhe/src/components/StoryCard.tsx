@@ -24,7 +24,15 @@ const KIND_LABEL: Record<NonNullable<NewsItem["kind"]>, string> = {
   community: "Community",
 };
 
-const topicOf = (item: NewsItem) => (item.kind ? KIND_LABEL[item.kind] : item.categories.includes("panth") ? "Panth" : "News");
+const BEAT_LABEL: Record<NonNullable<NewsItem["beat"]>, string> = {
+  rights: "Rights",
+  justice: "Justice",
+  khalistan: "Khalistan",
+  punjab: "Punjab",
+};
+
+const topicOf = (item: NewsItem) =>
+  item.kind ? KIND_LABEL[item.kind] : item.beat ? BEAT_LABEL[item.beat] : item.categories.includes("panth") ? "Panth" : "News";
 
 /** Where a story happened, if that adds anything. */
 function placeOf(item: NewsItem): string | null {
@@ -32,7 +40,7 @@ function placeOf(item: NewsItem): string | null {
   return item.america ? "United States" : null;
 }
 
-/** The kind of good news and where, like "Seva · Coventry". */
+/** The section and where, like "Seva · Coventry" or "Justice · Surrey". */
 export function kickerOf(item: NewsItem): string {
   const place = placeOf(item);
   return place ? `${topicOf(item)} · ${place}` : topicOf(item);

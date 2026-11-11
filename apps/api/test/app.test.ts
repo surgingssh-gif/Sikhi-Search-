@@ -261,6 +261,7 @@ describe("News routes", () => {
     tone: "neutral",
     kind: null,
     appeal: 1,
+    beat: null,
     summary: null,
     event: null,
     america: false,

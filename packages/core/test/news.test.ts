@@ -118,10 +118,18 @@ describe("NewsService", () => {
   });
 });
 
+describe("parseFeed old articles", () => {
+  it("drops articles a publisher marks as published in an earlier year", () => {
+    const feed: NewsFeed = { id: "g", name: "Google News", url: "https://g.test", language: "en", categories: ["panth"], aggregator: true };
+    const xml = `<rss><channel><item><title>Sikhs lament being mistaken for radicals (Published 2012) - The New York Times</title><link>https://example.org/1</link><source>The New York Times</source></item><item><title>Sikh leader honoured - BBC</title><link>https://example.org/2</link><source>BBC</source></item></channel></rss>`;
+    expect(parseFeed(xml, feed).map((i) => i.title)).toEqual(["Sikh leader honoured"]);
+  });
+});
+
 describe("NewsService memory", () => {
   it("carries what one run worked out into the next", () => {
     const memory = {
-      ratings: [["a", { interest: 3, tone: "uplifting", kind: "achievement", appeal: 3, america: true, duplicateOf: null }]],
+      ratings: [["a", { interest: 3, tone: "uplifting", kind: "achievement", appeal: 3, beat: null, america: true, duplicateOf: null }]],
       summaries: [["a", { summary: "A first.", event: "a-first" }]],
       resolved: [],
       previewImages: [],
@@ -137,7 +145,7 @@ describe("NewsService memory", () => {
 describe("guessRating", () => {
   const sikh = { panthic: true, sikhOutlet: false };
   it("rates good news about Sikhs in America highest", () => {
-    expect(guessRating("Gold domes now welcome worshippers at new Sikh temple", { ...sikh, region: "United States" })).toEqual({ interest: 3, tone: "uplifting", kind: "community", appeal: 1, america: true });
+    expect(guessRating("Gold domes now welcome worshippers at new Sikh temple", { ...sikh, region: "United States" })).toEqual({ interest: 3, tone: "uplifting", kind: "community", appeal: 1, beat: null, america: true });
   });
   it("marks crime and violence negative and lowers its interest", () => {
     expect(guessRating("Firing outside gurdwara in Ludhiana's Jagraon, masked man leaves threat letter", { ...sikh, region: "Punjab" })).toEqual({
@@ -145,8 +153,17 @@ describe("guessRating", () => {
       tone: "negative",
       kind: null,
       appeal: 0,
+      beat: null,
       america: false,
     });
+  });
+  it("guesses the beat of hard news about Sikhs", () => {
+    const beatOf = (t: string) => guessRating(t, { ...sikh, region: "Canada" }).beat;
+    expect(beatOf("Khalistan referendum draws thousands in Calgary")).toBe("khalistan");
+    expect(beatOf("Sikh man attacked outside gurdwara in hate crime")).toBe("rights");
+    expect(beatOf("Court hears 1984 case against former Congress leader")).toBe("justice");
+    expect(beatOf("Sikh volunteers serve langar to flood victims")).toBeNull();
+    expect(guessRating("Khalistan referendum draws thousands in Calgary", { panthic: true, sikhOutlet: false, region: "Canada" }).appeal).toBeGreaterThan(0);
   });
   it("guesses the kind of good news", () => {
     const kindOf = (t: string) => guessRating(t, { ...sikh, region: "United States" }).kind;
@@ -177,9 +194,9 @@ describe("NewsService ratings", () => {
         // Oldest first: parade, festival, langar.
         return {
           ratings: [
-            { id: ids[0], interest: 3, tone: "uplifting", kind: "celebration", appeal: 3, america: true, duplicateOf: null },
-            { id: ids[1], interest: 3, tone: "uplifting", kind: "celebration", appeal: 2, america: true, duplicateOf: ids[0] },
-            { id: ids[2], interest: 2, tone: "neutral", kind: "seva", appeal: 1, america: true, duplicateOf: null },
+            { id: ids[0], interest: 3, tone: "uplifting", kind: "celebration", appeal: 3, beat: null, america: true, duplicateOf: null },
+            { id: ids[1], interest: 3, tone: "uplifting", kind: "celebration", appeal: 2, beat: null, america: true, duplicateOf: ids[0] },
+            { id: ids[2], interest: 2, tone: "neutral", kind: "seva", appeal: 1, beat: null, america: true, duplicateOf: null },
           ],
         };
       },
@@ -205,7 +222,7 @@ describe("NewsService ratings", () => {
     const { llm } = fakeLlm({
       "news-rating": (req) => {
         const id = /\[(\w+)\]/.exec(String(req.messages[0]!.content))![1]!;
-        return { ratings: [{ id, interest: 3, tone: "uplifting", kind: "seva", appeal: 2, america: true, duplicateOf: null }] };
+        return { ratings: [{ id, interest: 3, tone: "uplifting", kind: "seva", appeal: 2, beat: null, america: true, duplicateOf: null }] };
       },
       "news-summary": (req) => {
         const id = /\[(\w+)\]/.exec(String(req.messages[0]!.content))![1]!;

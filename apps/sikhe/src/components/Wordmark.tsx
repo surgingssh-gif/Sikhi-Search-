@@ -28,7 +28,7 @@ export function Wordmark({ size = 28, tagline = true }: { size?: number; tagline
       </View>
       {tagline && (
         <Text style={{ fontFamily: FONT.sansBold, fontSize: Math.max(8, size * 0.24), letterSpacing: size * 0.075, color: colors.inkSoft, marginTop: 1 }}>
-          GOOD NEWS OF THE SIKH KAUM
+          NEWS OF THE SIKH KAUM
         </Text>
       )}
     </View>

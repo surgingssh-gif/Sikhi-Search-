@@ -3,7 +3,7 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import type { NewsItem } from "./api";
 
 /**
- * The reader's area, for "Near you": the good news from their own Sangat.
+ * The reader's area, for "Near you": the news from their own Sangat.
  * Chosen once in Settings and kept on this device only.
  */
 

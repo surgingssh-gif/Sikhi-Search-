@@ -1,7 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, router } from "expo-router";
-import { useRef, useState } from "react";
-import { Pressable, StyleSheet, useWindowDimensions, View, type ScrollViewInstance } from "react-native";
+import { useState } from "react";
+import { Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
 import { EditionNote } from "@/components/BriefingCard";
 import { CalendarEventRow } from "@/components/CalendarEventRow";
 import { EventRow } from "@/components/History";
@@ -115,7 +115,6 @@ export default function TodayScreen() {
   const today = localDate(now);
   const { colors } = useTheme();
   const wide = useWindowDimensions().width >= WIDE;
-  const scrollRef = useRef<ScrollViewInstance>(null);
   const edition = useEdition();
 
   const refresh = async () => {
@@ -134,8 +133,8 @@ export default function TodayScreen() {
   }
   if (edition.data) {
     return (
-      <Screen masthead refreshing={refreshing} onRefresh={refresh} scrollRef={scrollRef}>
-        <Magazine edition={edition.data} scrollRef={scrollRef} />
+      <Screen masthead refreshing={refreshing} onRefresh={refresh}>
+        <Magazine edition={edition.data} />
         {/* The rest of the day, as the magazine's back pages. */}
         <View style={{ gap: SPACE.md }}>
           <Text variant="label">Also today</Text>

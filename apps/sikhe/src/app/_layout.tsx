@@ -99,7 +99,8 @@ function Root() {
         <Stack.Screen name="bani/[id]" />
         <Stack.Screen name="article" />
         <Stack.Screen name="timeline" />
-        <Stack.Screen name="issue/[date]" />
+        <Stack.Screen name="issue/[date]/index" />
+        <Stack.Screen name="issue/[date]/[slug]" />
         <Stack.Screen name="chat/[id]" />
       </Stack>
     </>

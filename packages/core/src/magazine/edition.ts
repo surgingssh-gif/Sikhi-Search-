@@ -17,6 +17,10 @@ export interface EditionSource {
   title: string;
   url: string;
   publishedAt: string | null;
+  /** The publisher's photo for the story, shown with its credit. Missing in the first issues. */
+  image?: string | null;
+  /** Where the story happened, for the dateline. Missing in the first issues. */
+  place?: string | null;
 }
 
 export interface EditionParagraph {
@@ -192,7 +196,7 @@ const slugify = (s: string) =>
     .replace(/^-|-$/g, "")
     .slice(0, 60) || "story";
 
-const sourceOf = (i: NewsItem): EditionSource => ({ id: i.id, outlet: i.source, title: i.title, url: i.url, publishedAt: i.publishedAt });
+const sourceOf = (i: NewsItem): EditionSource => ({ id: i.id, outlet: i.source, title: i.title, url: i.url, publishedAt: i.publishedAt, image: i.image, place: i.place?.name ?? null });
 
 const describe = (i: NewsItem) =>
   `[${i.id}] ${i.source}, ${i.publishedAt?.slice(0, 10) ?? "undated"} (${i.kind ? `good news: ${i.kind}` : `hard news: ${i.beat}`}): ${i.title}${i.summary ? ` — ${i.summary}` : i.snippet ? ` — ${i.snippet}` : ""}`;

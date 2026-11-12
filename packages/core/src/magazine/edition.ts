@@ -146,7 +146,7 @@ const words = (s: string) => normalize(s).replace(/[^\p{L}\p{N}' ]+/gu, " ").spl
  * What's wrong with a paragraph, judged against the sources it cites: numbers
  * and quotations they don't contain, and long runs copied word for word.
  */
-export function paragraphProblems(text: string, cited: string[]): string[] {
+export function paragraphProblems(text: string, cited: string[], copyFrom: string[] = cited): string[] {
   const problems: string[] = [];
   const source = normalize(cited.join("\n"));
   const sourceWords = new Set(words(source));
@@ -171,7 +171,8 @@ export function paragraphProblems(text: string, cited: string[]): string[] {
   const RUN = 14;
   const own = words(plain);
   if (own.length >= RUN) {
-    const sw = words(source);
+    // Only the publishers' own words count as copying.
+    const sw = words(copyFrom.join("\n"));
     const runs = new Set<string>();
     for (let i = 0; i + RUN <= sw.length; i++) runs.add(sw.slice(i, i + RUN).join(" "));
     for (let i = 0; i + RUN <= own.length; i++) {
@@ -377,29 +378,48 @@ export function alternate<T extends { tone: "good" | "hard" }>(features: T[], co
 }
 
 async function writeBriefs(llm: JsonLlm, items: NewsItem[], usages: LlmUsage[], log: (message: string) => void): Promise<EditionBrief[]> {
+  const byId = new Map(items.map((i) => [i.id, i]));
+  const content = `<stories>\n${items.map((i) => `[${i.id}] ${i.source}: ${i.title}${i.snippet ? `\n   ${i.snippet}` : ""}${i.summary ? `\n   ${i.summary}` : ""}`).join("\n")}\n</stories>`;
+  type Draft = z.infer<typeof BriefsSchema>["briefs"][number];
+  // Facts are checked against everything the writer saw; copying only against the publisher's own words.
+  const problemsOf = (b: Draft) => {
+    const item = byId.get(b.id);
+    if (!item) return ["unknown story"];
+    return paragraphProblems(b.text, [[item.title, item.snippet, item.summary].filter(Boolean).join("\n")], [[item.title, item.snippet].filter(Boolean).join("\n")]);
+  };
   try {
-    const { data, usage } = await llm.completeJson({
-      step: "edition-briefs",
-      tier: "fast",
-      system: BRIEFS_SYSTEM,
-      messages: [{ role: "user", content: `<stories>\n${items.map((i) => `[${i.id}] ${i.source}: ${i.title}${i.snippet ? `\n   ${i.snippet}` : ""}${i.summary ? `\n   ${i.summary}` : ""}`).join("\n")}\n</stories>` }],
-      schema: BriefsSchema,
-      maxTokens: 3000,
-    });
-    usages.push(usage);
-    const byId = new Map(items.map((i) => [i.id, i]));
-    const out = data.briefs.flatMap((b) => {
-      const item = byId.get(b.id);
-      if (!item) return [];
-      const source = [item.title, item.snippet, item.summary].filter(Boolean).join("\n");
-      const problems = paragraphProblems(b.text, [source]);
+    const first = await llm.completeJson({ step: "edition-briefs", tier: "fast", system: BRIEFS_SYSTEM, messages: [{ role: "user", content }], schema: BriefsSchema, maxTokens: 3000 });
+    usages.push(first.usage);
+    let drafts = first.data.briefs.filter((b) => byId.has(b.id));
+    const failing = drafts.filter((b) => problemsOf(b).length);
+    if (failing.length) {
+      // One rewrite of the ones that failed, told why.
+      const notes = failing.map((b) => `[${b.id}] ${problemsOf(b).join("; ")}`).join("\n");
+      const second = await llm.completeJson({
+        step: "edition-briefs",
+        tier: "fast",
+        system: BRIEFS_SYSTEM,
+        messages: [
+          { role: "user", content },
+          { role: "assistant", content: JSON.stringify(first.data) },
+          { role: "user", content: `These briefs failed the check. Rewrite just these, in your own words, keeping to the facts given:\n${notes}` },
+        ],
+        schema: BriefsSchema,
+        maxTokens: 3000,
+      });
+      usages.push(second.usage);
+      const fixed = new Map(second.data.briefs.map((b) => [b.id, b]));
+      drafts = drafts.map((b) => fixed.get(b.id) ?? b);
+    }
+    const out = drafts.flatMap((b) => {
+      const problems = problemsOf(b);
       if (problems.length) {
         log(`Dropped the brief "${b.headline}": ${problems.join("; ")}.`);
         return [];
       }
-      return [{ kicker: b.kicker.trim(), headline: b.headline.trim(), text: b.text.trim(), source: sourceOf(item) }];
+      return [{ kicker: b.kicker.trim(), headline: b.headline.trim(), text: b.text.trim(), source: sourceOf(byId.get(b.id)!) }];
     });
-    log(`${out.length} of ${items.length} briefs written (${data.briefs.length} returned).`);
+    log(`${out.length} of ${items.length} briefs written.`);
     return out;
   } catch (err) {
     log(`The briefs couldn't be written: ${String(err)}`);

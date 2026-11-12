@@ -23,6 +23,10 @@ describe("paragraphProblems", () => {
     // A short shared phrase is fine.
     expect(paragraphProblems("Harjit Kaur said the langar would run every weekend until spring.", [source])).toEqual([]);
   });
+  it("counts only the publisher's words as copying", () => {
+    const ours = "Harjit Kaur, the committee secretary, said the gurdwara's volunteers would keep the langar running every weekend through the winter.";
+    expect(paragraphProblems(ours, [source, ours], [source])).toEqual([]);
+  });
   it("needs a source", () => {
     expect(paragraphProblems("Something happened.", [])).toEqual(["it cites no source"]);
   });

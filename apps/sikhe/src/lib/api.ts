@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import Constants from "expo-constants";
 import { Platform } from "react-native";
 
-export type { CalendarEvent, Edition, EditionArticle, EditionBrief, EditionSource, EditionSummary, NanakshahiDate, DatedHistoryEvent, HistoryEvent, Hukamnama, NewsItem, Shabad, Verse } from "@ask-sikhi/core";
+export type { CalendarEvent, Edition, EditionArticle, EditionBrief, EditionParagraph, EditionSource, EditionSummary, NanakshahiDate, DatedHistoryEvent, HistoryEvent, Hukamnama, NewsItem, Shabad, Verse } from "@ask-sikhi/core";
 
 /**
  * Where the API lives. EXPO_PUBLIC_API_URL wins; otherwise, in development, the

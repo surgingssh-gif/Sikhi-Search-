@@ -80,6 +80,8 @@ export const FONT = {
   nameplate: "PlayfairDisplay_800ExtraBold",
   /** The nameplate itself: Playfair Display, black italic. */
   nameplateItalic: "PlayfairDisplay_900Black_Italic",
+  /** The daily paper's own nameplate, in blackletter like a printed newspaper's. */
+  blackletter: "UnifrakturMaguntia_400Regular",
   gurmukhi: "NotoSerifGurmukhi_400Regular",
   gurmukhiBold: "NotoSerifGurmukhi_600SemiBold",
 } as const;

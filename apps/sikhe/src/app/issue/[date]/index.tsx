@@ -10,7 +10,7 @@ export default function IssueScreen() {
   const { date } = useLocalSearchParams<{ date: string }>();
   const { data, error, isPending, refetch } = useEdition(date);
   return (
-    <Screen masthead back>
+    <Screen masthead paper back>
       {isPending ? (
         <Loading label="Opening the issue…" />
       ) : error ? (

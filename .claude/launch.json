@@ -20,6 +20,31 @@
       "port": 8787
     },
     {
+      "name": "api-for-sikhe",
+      "runtimeExecutable": "/opt/homebrew/bin/npm",
+      "runtimeArgs": [
+        "run",
+        "dev:api"
+      ],
+      "env": {
+        "ALLOWED_ORIGINS": "http://localhost:8090,http://localhost:8081,http://localhost:3000"
+      },
+      "port": 8787
+    },
+    {
+      "name": "sikhe",
+      "runtimeExecutable": "/opt/homebrew/bin/npx",
+      "runtimeArgs": [
+        "expo",
+        "start",
+        "--web",
+        "--port",
+        "8090"
+      ],
+      "cwd": "apps/sikhe",
+      "port": 8090
+    },
+    {
       "name": "web",
       "runtimeExecutable": "/opt/homebrew/bin/npm",
       "runtimeArgs": [

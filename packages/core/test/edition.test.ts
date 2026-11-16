@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { alternate, editionDate, paragraphProblems, writeEdition, type NewsItem } from "../src";
+import { alternate, relatedReports, editionDate, paragraphProblems, writeEdition, type NewsItem } from "../src";
 import { fakeLlm } from "./fakes";
 
 const source =
@@ -92,12 +92,13 @@ describe("writeEdition", () => {
           return {
             kicker: "Seva",
             headline: "A winter of langar",
+            banner: "Langar Feeds 1,200; Volunteers Plan More",
             dek: "Volunteers at one gurdwara are feeding their neighbours every weekend.",
             paragraphs: [
-              { text: "Volunteers at the gurdwara served 1,200 free meals on Sunday.", sources: ["S1"] },
-              { text: `"We do this because seva is at the heart of our faith," said Harjit Kaur.`, sources: ["S1"] },
+              { text: "Volunteers at the gurdwara served 1,200 free meals on Sunday.", sources: ["S1"], subhead: null },
+              { text: `"We do this because seva is at the heart of our faith," said Harjit Kaur.`, sources: ["S1"], subhead: "Why they serve" },
               // Made up, twice: dropped.
-              { text: "They plan to serve 10,000 more by spring.", sources: ["S1"] },
+              { text: "They plan to serve 10,000 more by spring.", sources: ["S1"], subhead: null },
             ],
             pullQuote: "Volunteers at the gurdwara served 1,200 free meals on Sunday.",
           };
@@ -105,10 +106,11 @@ describe("writeEdition", () => {
         return {
           kicker: "Justice",
           headline: "A hearing at last",
+          banner: "Activist's Case Heard; Hearing Continues",
           dek: "The case continues next month.",
           paragraphs: [
-            { text: "The court heard the activist's case on Tuesday.", sources: ["S1"] },
-            { text: "His lawyer said the hearing continues next month.", sources: ["S1"] },
+            { text: "The court heard the activist's case on Tuesday.", sources: ["S1"], subhead: null },
+            { text: "His lawyer said the hearing continues next month.", sources: ["S1"], subhead: null },
           ],
           pullQuote: null,
         };
@@ -122,6 +124,8 @@ describe("writeEdition", () => {
     const cover = edition.articles[0]!;
     expect(cover.paragraphs).toHaveLength(2);
     expect(cover.paragraphs[0]!.sources).toEqual(["a"]);
+    expect(cover.paragraphs[1]!.subhead).toBe("Why they serve");
+    expect(cover.banner).toBe("Langar Feeds 1,200; Volunteers Plan More");
     expect(cover.sources[0]).toMatchObject({ id: "a", url: "https://example.org/a" });
     expect(cover.tone).toBe("good");
     expect(edition.articles[1]!.tone).toBe("hard");
@@ -129,5 +133,16 @@ describe("writeEdition", () => {
     expect(edition.briefs).toHaveLength(1);
     // The cover story was rewritten once after failing the check.
     expect(calls.filter((c) => c.step === "edition-article" && c.messages.length === 3)).toHaveLength(1);
+  });
+});
+
+describe("relatedReports", () => {
+  it("finds other outlets' reports of the same event by its names and places, and leaves out look-alikes", () => {
+    const seed = item("s", "Three youths charged after Sikh man's turban torn off on Barrie bus", { snippet: "Police in Barrie, Ontario charged three teens after beer was poured on him on a Barrie Transit bus." });
+    const same = item("t", "Barrie police charge teens over turban attack on Sikh man", { snippet: "The man was on a Barrie Transit bus in Ontario when beer was poured on him." });
+    const other = item("u", "Man arrested for hate crime attack on Sikh driver in Texas", { snippet: "Police charged a man after a turban attack." });
+    const slug = item("v", "Teens in court", { event: "barrie-bus-turban" });
+    const found = relatedReports([{ ...seed, event: "barrie-bus-turban" }], [seed, same, other, slug], new Set());
+    expect(found.map((i) => i.id)).toEqual(["v", "t"]);
   });
 });

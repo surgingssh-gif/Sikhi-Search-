@@ -3,6 +3,7 @@ import { NotoSerifGurmukhi_400Regular, NotoSerifGurmukhi_600SemiBold } from "@ex
 import { SourceSerif4_400Regular, SourceSerif4_400Regular_Italic, SourceSerif4_600SemiBold, SourceSerif4_700Bold } from "@expo-google-fonts/source-serif-4";
 import { PlayfairDisplay_800ExtraBold, PlayfairDisplay_900Black_Italic } from "@expo-google-fonts/playfair-display";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { UnifrakturMaguntia_400Regular } from "@expo-google-fonts/unifrakturmaguntia";
 import { useFonts } from "expo-font";
 import * as Notifications from "expo-notifications";
 import { router, Stack } from "expo-router";
@@ -51,6 +52,7 @@ export default function RootLayout() {
     LibreFranklin_700Bold,
     PlayfairDisplay_800ExtraBold,
     PlayfairDisplay_900Black_Italic,
+    UnifrakturMaguntia_400Regular,
     NotoSerifGurmukhi_400Regular,
     NotoSerifGurmukhi_600SemiBold,
   });

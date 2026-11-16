@@ -133,7 +133,7 @@ export default function TodayScreen() {
   }
   if (edition.data) {
     return (
-      <Screen masthead refreshing={refreshing} onRefresh={refresh}>
+      <Screen masthead paper refreshing={refreshing} onRefresh={refresh}>
         <Magazine edition={edition.data} />
         {/* The rest of the day, as the magazine's back pages. */}
         <View style={{ gap: SPACE.md }}>

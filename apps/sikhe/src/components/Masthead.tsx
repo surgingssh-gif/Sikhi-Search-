@@ -73,7 +73,7 @@ function Pill({ label, icon, onPress, href }: { label?: string; icon?: keyof typ
  * The newspaper header on every section, kept to three lines: the date with
  * search and the theme switch, the nameplate, and the sections.
  */
-export function Masthead() {
+export function Masthead({ paper = false }: { paper?: boolean }) {
   const { colors, dark, setAppearance } = useTheme();
   const path = usePathname();
   const { width } = useWindowDimensions();
@@ -99,13 +99,17 @@ export function Masthead() {
         </View>
       </View>
 
-      <View style={{ marginTop: narrow ? SPACE.md : 2, marginBottom: SPACE.sm }}>
-        <Link href="/" asChild>
-          <Pressable accessibilityRole="link" accessibilityLabel="Sikhe, today">
-            <Wordmark size={narrow ? 30 : 36} />
-          </Pressable>
-        </Link>
-      </View>
+      {paper ? (
+        <PaperNameplate label={ns?.label} />
+      ) : (
+        <View style={{ marginTop: narrow ? SPACE.md : 2, marginBottom: SPACE.sm }}>
+          <Link href="/" asChild>
+            <Pressable accessibilityRole="link" accessibilityLabel="Sikhe, today">
+              <Wordmark size={narrow ? 30 : 36} />
+            </Pressable>
+          </Link>
+        </View>
+      )}
 
       {narrow && (
         <Text variant="meta" color="inkSoft" style={{ textAlign: "center", marginBottom: SPACE.sm }} numberOfLines={1}>
@@ -141,6 +145,51 @@ export function Masthead() {
   );
 }
 
+/** A boxed note beside the nameplate, as a newspaper sets its "ears". */
+function Ear({ children, align }: { children: React.ReactNode; align: "left" | "right" }) {
+  const { colors } = useTheme();
+  return (
+    <View style={[styles.ear, { borderColor: colors.ink, alignItems: align === "left" ? "flex-start" : "flex-end" }]}>
+      {children}
+    </View>
+  );
+}
+
+/** The daily paper's own nameplate: "Sikhe" in blackletter, large, between its ears. */
+function PaperNameplate({ label }: { label?: string }) {
+  const { colors } = useTheme();
+  const { width } = useWindowDimensions();
+  const narrow = width < NARROW;
+  const ears = width >= 900;
+  const size = narrow ? 52 : ears ? 92 : 76;
+  return (
+    <View style={[styles.paperPlate, !ears && { justifyContent: "center" }, narrow && { marginTop: SPACE.md }]}>
+      {ears && (
+        <Ear align="left">
+          <Text style={{ fontFamily: FONT.displayItalic, fontSize: 13, lineHeight: 17, color: colors.ink }}>{"“All the news of the\nSikh kaum, every day.”"}</Text>
+        </Ear>
+      )}
+      <Link href="/" asChild>
+        <Pressable accessibilityRole="link" accessibilityLabel="Sikhe, today" style={{ flexShrink: 1 }}>
+          <Text accessibilityRole="header" style={{ fontFamily: FONT.blackletter, fontSize: size, lineHeight: size * 1.08, color: colors.ink, textAlign: "center" }}>
+            Sikhe
+          </Text>
+        </Pressable>
+      </Link>
+      {ears && (
+        <Ear align="right">
+          <Text variant="meta" color="ink" style={{ fontFamily: FONT.sansBold, textAlign: "right" }}>
+            {label ?? "Today"}
+          </Text>
+          <Text variant="meta" color="inkSoft" style={{ textAlign: "right" }}>
+            Written by AI from{"\n"}the day&apos;s reporting
+          </Text>
+        </Ear>
+      )}
+    </View>
+  );
+}
+
 /** The foot of every section, under a double rule. */
 export function Footer() {
   const { colors } = useTheme();
@@ -168,4 +217,6 @@ const styles = StyleSheet.create({
   sections: { flexDirection: "row", gap: 22, paddingVertical: 4 },
   section: { paddingVertical: 6, borderBottomWidth: 2 },
   footer: { marginTop: SPACE.xxl },
+  paperPlate: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: SPACE.lg, marginBottom: SPACE.sm },
+  ear: { width: 170, borderWidth: 1, paddingVertical: 7, paddingHorizontal: 9, gap: 2 },
 });

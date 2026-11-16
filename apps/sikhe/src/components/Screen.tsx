@@ -25,6 +25,7 @@ export function Screen({
   back,
   scrollRef,
   masthead,
+  paper,
   width,
 }: {
   title?: string;
@@ -38,6 +39,8 @@ export function Screen({
   back?: boolean;
   scrollRef?: Ref<ScrollViewInstance>;
   masthead?: boolean;
+  /** The daily paper's front page: the masthead gets the paper's own nameplate. */
+  paper?: boolean;
   /** How wide the content gets. Section pages default to the full page width. */
   width?: number;
 }) {
@@ -52,7 +55,7 @@ export function Screen({
     >
       {masthead && (
         <View style={[styles.column, { maxWidth: PAGE_WIDTH, marginBottom: SPACE.xl }]}>
-          <Masthead />
+          <Masthead paper={paper} />
         </View>
       )}
       <View style={[styles.column, { maxWidth: width ?? (masthead ? PAGE_WIDTH : READING_WIDTH) }]}>

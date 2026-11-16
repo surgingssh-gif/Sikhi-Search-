@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import Constants from "expo-constants";
 import { Platform } from "react-native";
 
-export type { CalendarEvent, Edition, EditionArticle, EditionBrief, EditionParagraph, EditionSource, EditionSummary, NanakshahiDate, DatedHistoryEvent, HistoryEvent, Hukamnama, NewsItem, Shabad, Verse } from "@ask-sikhi/core";
+export type { CalendarEvent, Edition, EditionArticle, EditionArt, EditionBrief, EditionParagraph, EditionSource, EditionSummary, NanakshahiDate, DatedHistoryEvent, HistoryEvent, Hukamnama, NewsItem, Shabad, Verse } from "@ask-sikhi/core";
 
 /**
  * Where the API lives. EXPO_PUBLIC_API_URL wins; otherwise, in development, the
@@ -48,6 +48,12 @@ export function friendlyError(err: unknown): string {
 
 /** On the free hosted site there's no server: the app answers its own API requests (see local-api). */
 export const STATIC = process.env.EXPO_PUBLIC_STATIC === "1";
+
+/** Where an issue's map or illustration is: next to the site on the hosted site, from the API otherwise. */
+export function editionFileUrl(file: string): string {
+  const base = (process.env.EXPO_PUBLIC_BASE_URL ?? "").replace(/\/$/, "");
+  return STATIC ? `${base}/data/editions/${file}` : `${API_URL}/v1/editions/files/${file}`;
+}
 
 export async function getJson<T>(path: string): Promise<T> {
   let res: Response;

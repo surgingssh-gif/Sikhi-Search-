@@ -2,7 +2,7 @@ import { Image } from "expo-image";
 import { Link, type Href } from "expo-router";
 import { useState, type ReactNode } from "react";
 import { Platform, Pressable, StyleSheet, useWindowDimensions, View, type TextStyle, type ViewStyle } from "react-native";
-import { useCalendar, useEditions, useNews, type Edition, type EditionArticle, type EditionBrief, type EditionParagraph, type EditionSource } from "@/lib/api";
+import { editionFileUrl, useCalendar, useEditions, useNews, type Edition, type EditionArt, type EditionArticle, type EditionBrief, type EditionParagraph, type EditionSource } from "@/lib/api";
 import { openStory } from "@/lib/stories";
 import { useTheme } from "@/theme/theme";
 import { FONT, NARROW, SPACE, WIDE } from "@/theme/tokens";
@@ -30,27 +30,16 @@ const pageOf = (edition: Edition, article: EditionArticle) => `A${edition.articl
 /** Countries and regions: too broad for a dateline, which names a city. */
 const BROAD = /^(punjab|india|pakistan|canada|united kingdom|united states|australia|new zealand|europe|asia|africa|middle east|england|scotland|wales|italy|germany|kenya|malaysia|singapore|delhi ncr)$/i;
 
-/** Photos that are really video stills, collages, logos or app cards: they never look like a newspaper's. */
-const POOR_PHOTO = /inshorts|ytimg|youtube|maxresdefault|collage|logo|placeholder|default[-_]?(image|img|thumb)|thumbnail|\/icons?\//i;
-
-/** A source's photo and place: kept with new issues, looked up in the day's news for the first ones. */
+/** A source's place: kept with new issues, looked up in the day's news for the first ones. */
 function useSourceArt() {
   const { data } = useNews();
   const byId = new Map((data?.items ?? []).map((i) => [i.id, i]));
-  return (s: EditionSource) => {
-    const item = byId.get(s.id);
-    return { image: s.image ?? item?.image ?? null, place: s.place ?? item?.place?.name ?? null };
-  };
+  return (s: EditionSource) => ({ place: s.place ?? byId.get(s.id)?.place?.name ?? null });
 }
 type Art = ReturnType<typeof useSourceArt>;
 
-/** Every photo the article's sources offer that might print well, best source first. */
-function photosOf(article: EditionArticle, art: Art) {
-  return article.sources.flatMap((s) => {
-    const { image } = art(s);
-    return image && !POOR_PHOTO.test(image) ? [{ uri: image, credit: outletName(s.outlet) }] : [];
-  });
-}
+/** The article's picture: its illustration, or failing that its map. */
+const pictureOf = (article: EditionArticle) => (article.art ? { art: article.art, kind: "illustration" as const } : article.map ? { art: article.map, kind: "map" as const } : null);
 
 /** "LAHORE": the first city a source is tagged with that the article itself names, so the dateline is never a guess. */
 function datelineOf(article: EditionArticle, art: Art) {
@@ -100,33 +89,30 @@ function useColumnType(size: number): TextStyle {
   return { fontFamily: FONT.serif, fontSize: size, lineHeight: Math.round(size * 1.45), color: colors.ink, ...web };
 }
 
-/** A photo printed in black and white with its credit, like newsprint. Tries the next photo if one is small, odd-shaped or broken. */
-function PrintPhoto({ photos, ratio = 16 / 10 }: { photos: { uri: string; credit: string }[]; ratio?: number }) {
+/**
+ * An illustration or a map, with its caption and credit under a hairline,
+ * as a newspaper prints them. Leaves itself out if the file won't load.
+ */
+function Picture({ picture, compact = false }: { picture: { art: EditionArt; kind: "illustration" | "map" } | null; compact?: boolean }) {
   const { colors } = useTheme();
-  const [n, setN] = useState(0);
-  const photo = photos[n];
-  if (!photo) return null;
-  const print = Platform.OS === "web" ? ({ filter: "grayscale(1) contrast(1.08) brightness(1.02)" } as ViewStyle) : null;
+  const [failed, setFailed] = useState(false);
+  if (!picture || failed) return null;
+  const { art, kind } = picture;
   return (
-    <View style={{ gap: 4 }}>
-      <View style={[{ width: "100%", aspectRatio: ratio, backgroundColor: colors.sunken, overflow: "hidden" }, print]}>
-        <Image
-          key={photo.uri}
-          source={photo.uri}
-          style={{ width: "100%", height: "100%" }}
-          contentFit="cover"
-          transition={250}
-          accessibilityIgnoresInvertColors
-          onError={() => setN(n + 1)}
-          onLoad={(e) => {
-            const { width, height } = e.source;
-            if (width < 700 || width / height < 1.2 || width / height > 2.2) setN(n + 1);
-          }}
-        />
+    <View style={{ gap: 5 }}>
+      <View style={{ width: "100%", aspectRatio: kind === "map" ? 1200 / 750 : 3 / 2, backgroundColor: colors.sunken, overflow: "hidden" }}>
+        <Image source={editionFileUrl(art.file)} style={{ width: "100%", height: "100%" }} contentFit="cover" transition={250} accessibilityLabel={art.alt} onError={() => setFailed(true)} />
       </View>
-      <Text variant="meta" color="inkFaint" style={{ fontSize: 9.5, letterSpacing: 0.3, textAlign: "right", textTransform: "uppercase" }}>
-        {`Photo via ${photo.credit}`}
-      </Text>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", gap: SPACE.md }}>
+        {!compact && kind === "illustration" ? (
+          <Text style={{ fontFamily: FONT.displayItalic, fontSize: 12.5, lineHeight: 17, color: colors.inkSoft, flex: 1 }}>{art.caption}</Text>
+        ) : (
+          <View style={{ flex: 1 }} />
+        )}
+        <Text variant="meta" color="inkFaint" style={{ fontSize: 9, letterSpacing: 0.4, textTransform: "uppercase" }}>
+          {kind === "map" ? "Map: Sikhe · Natural Earth" : "Illustration: AI, for Sikhe"}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -213,7 +199,7 @@ const HEADS = { one: { size: 21, deck: 14.5 }, two: { size: 26, deck: 16 }, thre
  * opening in `cols` columns, then the jump. `showHead` false leaves the
  * headline to a banner above.
  */
-function FrontStory({ edition, article, art, head, cols = 1, budget, text = 14, headline }: { edition: Edition; article: EditionArticle; art: Art; head: Head; cols?: number; budget: number; text?: number; headline?: string | null }) {
+function FrontStory({ edition, article, art, head, cols = 1, budget, text = 14, headline, picture = false }: { edition: Edition; article: EditionArticle; art: Art; head: Head; cols?: number; budget: number; text?: number; headline?: string | null; picture?: boolean }) {
   const { colors } = useTheme();
   const paras = opening(article.paragraphs, budget);
   const more = paras.length < article.paragraphs.length;
@@ -222,6 +208,11 @@ function FrontStory({ edition, article, art, head, cols = 1, budget, text = 14, 
   const title = headline === undefined ? article.headline : headline;
   return (
     <View style={{ gap: SPACE.sm }}>
+      {picture && (
+        <View style={{ marginBottom: 4 }}>
+          <Picture picture={pictureOf(article)} compact />
+        </View>
+      )}
       <Link href={articleHref(edition.date, article.slug)} asChild>
         <Pressable accessibilityRole="link" style={{ gap: 6 }}>
           {(state) => {
@@ -337,18 +328,18 @@ export function Magazine({ edition }: { edition: Edition }) {
   const art = useSourceArt();
   const [lead, a, b, c, d, ...extra] = edition.articles;
   if (!lead) return null;
-  const photos = photosOf(lead, art);
+  const leadPicture = pictureOf(lead);
   // A banner over the lead's own column, unless the issue has none: then the column carries the headline.
   const leadHead = lead.banner ? lead.headline : null;
   const fold = { borderTopWidth: 1, borderTopColor: colors.rule, paddingTop: SPACE.lg } as const;
-  const story = (x: EditionArticle | undefined, head: Head, budget: number, cols = 1, text = 14) => (x ? <FrontStory edition={edition} article={x} art={art} head={head} budget={budget} cols={cols} text={text} /> : null);
+  const story = (x: EditionArticle | undefined, head: Head, budget: number, cols = 1, text = 14) => (x ? <FrontStory edition={edition} article={x} art={art} head={head} budget={budget} cols={cols} text={text} picture /> : null);
 
   if (narrow) {
     return (
       <View style={{ gap: SPACE.xl }}>
         <Folio edition={edition} />
         <Banner edition={edition} article={lead} size={31} />
-        <PrintPhoto photos={photos} ratio={3 / 2} />
+        <Picture picture={leadPicture} />
         <FrontStory edition={edition} article={lead} art={art} head={HEADS.phone} budget={1100} text={16} headline={leadHead} />
         {[a, b, c, d, ...extra].map((x) =>
           x ? (
@@ -368,7 +359,7 @@ export function Magazine({ edition }: { edition: Edition }) {
       <View style={{ gap: SPACE.xl }}>
         <Folio edition={edition} />
         <Banner edition={edition} article={lead} size={40} />
-        <PrintPhoto photos={photos} />
+        <Picture picture={leadPicture} />
         <FrontStory edition={edition} article={lead} art={art} head={HEADS.two} budget={2200} cols={2} text={14.5} headline={leadHead} />
         {Array.from({ length: Math.ceil(rest.length / 2) }, (_, r) => (
           <Columns key={r} gap={18} style={fold}>
@@ -392,7 +383,7 @@ export function Magazine({ edition }: { edition: Edition }) {
             <Banner edition={edition} article={lead} size={46} />
             <View style={{ flexDirection: "row" }}>
               <View style={{ flex: 3, gap: SPACE.lg, minWidth: 0 }}>
-                <PrintPhoto photos={photos} />
+                <Picture picture={leadPicture} />
                 {c && (
                   <View style={{ borderTopWidth: 1, borderTopColor: colors.ink, paddingTop: SPACE.md }}>
                     {story(c, HEADS.three, 2400, 3)}
@@ -465,7 +456,7 @@ export function ArticlePage({ edition, article }: { edition: Edition; article: E
       </View>
 
       <View style={{ maxWidth: 860, width: "100%", alignSelf: "center" }}>
-        <PrintPhoto photos={photosOf(article, art)} />
+        <Picture picture={pictureOf(article)} />
       </View>
 
       <View style={text}>
@@ -477,6 +468,14 @@ export function ArticlePage({ edition, article }: { edition: Edition; article: E
               {p.text}
               {n === article.paragraphs.length - 1 ? <Text style={[body, { color: colors.accent }]}>{"  ■"}</Text> : null}
             </Text>
+            {n === 3 && article.art && article.map ? (
+              <View style={{ marginBottom: SPACE.xl, gap: 4 }}>
+                <Text variant="label" color="inkSoft" style={{ fontSize: 9.5 }}>
+                  Where it happened
+                </Text>
+                <Picture picture={{ art: article.map, kind: "map" }} compact />
+              </View>
+            ) : null}
             {n + 1 === pullAt && (
               <View style={[styles.pull, { borderColor: colors.rule }]}>
                 <Text style={{ fontFamily: FONT.displayItalic, fontSize: narrow ? 22 : 26, lineHeight: narrow ? 30 : 35, color: colors.ink, textAlign: "center" }}>{article.pullQuote}</Text>

@@ -64,6 +64,7 @@ export const PLACES: Place[] = [
 
   // Elsewhere in India
   P("Delhi", "India", 28.614, 77.209, 3, ["New Delhi", "ਦਿੱਲੀ"]),
+  P("Dibrugarh", "India", 27.472, 94.912, 3, ["ਡਿਬਰੂਗੜ੍ਹ"]),
   P("Hazur Sahib", "India", 19.153, 77.305, 3, ["Nanded", "Takht Sachkhand", "ਹਜ਼ੂਰ ਸਾਹਿਬ"]),
   P("Patna Sahib", "India", 25.594, 85.137, 3, ["Patna", "ਪਟਨਾ"]),
   P("Mumbai", "India", 19.076, 72.878, 3),
@@ -86,6 +87,7 @@ export const PLACES: Place[] = [
   P("Surrey", "Canada", 49.191, -122.849, 3, ["Surrey, B.C.", "Surrey, BC"]),
   P("Brampton", "Canada", 43.731, -79.762, 3, ["ਬਰੈਂਪਟਨ"]),
   P("Toronto", "Canada", 43.653, -79.383, 3, ["ਟੋਰਾਂਟੋ"]),
+  P("Barrie", "Canada", 44.389, -79.69, 3),
   P("Vancouver", "Canada", 49.283, -123.121, 3),
   P("Ottawa", "Canada", 45.421, -75.697, 3),
   P("Winnipeg", "Canada", 49.895, -97.138, 3),

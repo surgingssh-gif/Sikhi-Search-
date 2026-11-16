@@ -389,6 +389,7 @@ describe("Magazine routes", () => {
     latest: async () => edition,
     get: async (date: string) => (date === edition.date ? edition : null),
     list: async () => [{ date: edition.date, issue: 1, headline: "A cover story" }],
+    file: async (date: string, name: string) => (date === "2026-11-11" && name === "cover-map.svg" ? new TextEncoder().encode("<svg/>") : null),
   };
   const app = createApp({ banidb: banidbWith(async () => shabad), editions });
 
@@ -398,6 +399,15 @@ describe("Magazine routes", () => {
     expect((await app.request("/v1/editions/2026-11-10")).status).toBe(404);
     expect((await app.request("/v1/editions/../secrets")).status).toBe(404);
     expect(await (await app.request("/v1/editions")).json()).toEqual({ editions: [{ date: "2026-11-11", issue: 1, headline: "A cover story" }] });
+  });
+  it("serves an issue's pictures, and nothing outside its folder", async () => {
+    const res = await app.request("/v1/editions/files/2026-11-11/cover-map.svg");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("image/svg+xml");
+    expect(await res.text()).toBe("<svg/>");
+    expect((await app.request("/v1/editions/files/2026-11-11/other.svg")).status).toBe(404);
+    expect((await app.request("/v1/editions/files/2026-11-11/..%2F.env")).status).toBe(404);
+    expect((await app.request("/v1/editions/files/2026-11-11/notes.txt")).status).toBe(404);
   });
   it("has no issue without a store", async () => {
     const bare = createApp({ banidb: banidbWith(async () => shabad) });

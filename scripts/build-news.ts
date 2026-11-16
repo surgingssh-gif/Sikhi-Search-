@@ -137,4 +137,22 @@ if (llm && due) {
     console.error("The issue couldn't be written:", err);
   }
 }
+
+// The latest issue's maps and illustrations: anything not yet tried, so a failed picture is retried next hour.
+const latest = await readJson<Edition>(path.join(editionsDir, "latest.json"));
+if (llm && latest?.articles.some((a) => a.map === undefined || (a.art === undefined && process.env.OPENAI_API_KEY))) {
+  const { illustrateEdition, OpenAiImages } = await import("@ask-sikhi/core/art");
+  const images = process.env.OPENAI_API_KEY ? new OpenAiImages(process.env.OPENAI_API_KEY) : undefined;
+  console.log(images ? "Drawing the issue's maps and illustrations." : "Drawing the issue's maps (no OPENAI_API_KEY, so no illustrations).");
+  try {
+    const usages = await illustrateEdition(latest, { llm, images, dir: editionsDir, log: (m) => console.log(m) });
+    await writeFile(path.join(editionsDir, "latest.json"), JSON.stringify(latest));
+    await writeFile(path.join(editionsDir, `${latest.date}.json`), JSON.stringify(latest));
+    const pictures = latest.articles.filter((a) => a.art).length;
+    const maps = latest.articles.filter((a) => a.map).length;
+    console.log(`${pictures} illustrations and ${maps} maps; the art direction and checks cost $${usages.reduce((s, u) => s + u.costUsd, 0).toFixed(4)}.`);
+  } catch (err) {
+    console.error("The issue's art couldn't be made:", err);
+  }
+}
 await cp(editionsDir, path.join(outDir, "editions"), { recursive: true });

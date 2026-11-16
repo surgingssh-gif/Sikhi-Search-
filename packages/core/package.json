@@ -6,20 +6,27 @@
   "description": "Framework-free core for Ask Sikhi: BaniDB client, Gurbani types, citation validation.",
   "exports": {
     ".": "./src/index.ts",
-    "./history": "./src/history/events.ts"
+    "./history": "./src/history/events.ts",
+    "./art": "./src/magazine/art.ts"
   },
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p ."
   },
   "devDependencies": {
+    "@types/d3-geo": "^3.1.1",
     "@types/node": "^26.6.5",
+    "@types/topojson-client": "^3.1.5",
     "typescript": "^7.0.2",
     "vitest": "^5.0.5"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.2.0",
+    "d3-geo": "^3.1.2",
     "fast-xml-parser": "^5.11.2",
+    "sane-topojson": "^4.0.0",
+    "topojson-client": "^3.1.0",
+    "world-atlas": "^2.0.2",
     "zod": "^4.6.7"
   }
 }

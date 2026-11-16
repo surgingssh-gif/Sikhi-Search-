@@ -36,6 +36,8 @@ export interface JsonRequest<S extends z.ZodType> {
    */
   context?: string;
   messages: ChatTurn[];
+  /** Pictures for the model to look at, sent with the last message. */
+  images?: { mediaType: "image/png" | "image/jpeg" | "image/webp"; data: string }[];
   schema: S;
   maxTokens?: number;
 }
@@ -75,6 +77,22 @@ function supportsDefaultFallback(model: string): boolean {
   return /^claude-(opus-5|sonnet-5-5|fable-5)/.test(model);
 }
 
+/** The request's messages, with its pictures put in front of the last message's text. */
+function withImages(req: JsonRequest<z.ZodType>): Anthropic.Beta.BetaMessageParam[] {
+  if (!req.images?.length) return req.messages;
+  const last = req.messages.at(-1)!;
+  return [
+    ...req.messages.slice(0, -1),
+    {
+      role: last.role,
+      content: [
+        ...req.images.map((i) => ({ type: "image" as const, source: { type: "base64" as const, media_type: i.mediaType, data: i.data } })),
+        { type: "text" as const, text: last.content },
+      ],
+    },
+  ];
+}
+
 export class AnthropicJsonLlm implements JsonLlm {
   private readonly client: Anthropic;
   readonly models: Record<ModelTier, string>;
@@ -95,7 +113,7 @@ export class AnthropicJsonLlm implements JsonLlm {
         { type: "text", text: req.system, cache_control: { type: "ephemeral" } },
         ...(req.context ? [{ type: "text" as const, text: req.context, cache_control: { type: "ephemeral" as const } }] : []),
       ],
-      messages: req.messages,
+      messages: withImages(req),
       output_config: { effort: EFFORT[req.tier], format: betaZodOutputFormat(req.schema) },
       ...(fallback ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const } : {}),
     });

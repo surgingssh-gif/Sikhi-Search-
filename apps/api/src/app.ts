@@ -48,6 +48,8 @@ export interface AppDeps {
     latest(): Promise<Edition | null>;
     get(date: string): Promise<Edition | null>;
     list(): Promise<EditionSummary[]>;
+    /** A picture for an issue (a map or illustration), by the issue's date and the file's name. */
+    file?(date: string, name: string): Promise<Uint8Array | null>;
   };
   allowedOrigins?: string[];
   /** Per-client limit on AI endpoints, per minute. */
@@ -157,6 +159,19 @@ export function createApp({ banidb, llm, library, news, wikipedia, editions, all
     if (!edition) return c.json({ error: "not_found" }, 404);
     c.header("cache-control", "public, max-age=600");
     return c.json(edition);
+  });
+
+  // An issue's maps and illustrations. The hosted site serves these as plain files instead.
+  const PICTURE_TYPES: Record<string, string> = { svg: "image/svg+xml", webp: "image/webp", png: "image/png", jpg: "image/jpeg" };
+  app.get("/v1/editions/files/:date/:name", async (c) => {
+    const { date, name } = c.req.param();
+    const ext = /^[a-z0-9-]+\.(svg|webp|png|jpg)$/.exec(name)?.[1];
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !ext) return c.json({ error: "not_found" }, 404);
+    const data = editions?.file ? await editions.file(date, name) : null;
+    if (!data) return c.json({ error: "not_found" }, 404);
+    c.header("content-type", PICTURE_TYPES[ext]!);
+    c.header("cache-control", "public, max-age=3600");
+    return c.body(data as Uint8Array<ArrayBuffer>);
   });
 
   app.get("/v1/news/briefing", async (c) => {

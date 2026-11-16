@@ -1,7 +1,8 @@
 # Builds and publishes Sikhe on GitHub Pages, on GitHub's computers, so it
 # works with your own computer off. Every hour it fetches the news, has the
 # model rate and summarise it, and republishes the site with the fresh news.
-# The first run after 5 a.m. New York time also writes the day's magazine.
+# The first run after 5 a.m. New York time also writes the day's magazine,
+# with a map for each story and, given an OpenAI key, illustrations.
 # A push to main republishes it straight away.
 name: Sikhe site
 
@@ -87,6 +88,8 @@ jobs:
         env:
           # The key may be saved under either name.
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY || secrets.API_KEY }}
+          # Optional: with it, each issue gets woodcut illustrations as well as maps.
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           FORCE_EDITION: ${{ inputs.new_issue && '1' || '' }}
         run: |
           rm -rf apps/sikhe/dist/data

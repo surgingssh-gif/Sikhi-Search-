@@ -25,6 +25,15 @@ export class FileEditionStore {
     return /^\d{4}-\d{2}-\d{2}$/.test(date) ? this.read<Edition>(`${date}.json`) : Promise.resolve(null);
   }
 
+  /** A map or illustration from an issue's folder; the route checks the names. */
+  async file(date: string, name: string): Promise<Uint8Array | null> {
+    try {
+      return await readFile(path.join(this.dir, date, name));
+    } catch {
+      return null;
+    }
+  }
+
   async list() {
     return (await this.read<EditionSummary[]>("index.json")) ?? [];
   }

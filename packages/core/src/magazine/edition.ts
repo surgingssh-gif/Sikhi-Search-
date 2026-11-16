@@ -21,6 +21,18 @@ export interface EditionSource {
   image?: string | null;
   /** Where the story happened, for the dateline. Missing in the first issues. */
   place?: string | null;
+  /** That place's coordinates, for the map. */
+  at?: { lat: number; lng: number } | null;
+}
+
+/** A picture for an article: a file in the editions folder, under the issue's date. */
+export interface EditionArt {
+  /** Path within the editions folder, such as "2026-11-16/barrie-teens-map.svg". */
+  file: string;
+  /** What the picture shows, for screen readers. */
+  alt: string;
+  /** The line printed under it. */
+  caption: string;
 }
 
 export interface EditionParagraph {
@@ -47,6 +59,10 @@ export interface EditionArticle {
   /** Good news, or hard news. */
   tone: "good" | "hard";
   readMinutes: number;
+  /** The illustration: undefined until tried, null when there is none. */
+  art?: EditionArt | null;
+  /** A map of where it happened: undefined until tried, null when there is none. */
+  map?: EditionArt | null;
 }
 
 export interface EditionBrief {
@@ -208,7 +224,7 @@ const slugify = (s: string) =>
     .replace(/^-|-$/g, "")
     .slice(0, 60) || "story";
 
-const sourceOf = (i: NewsItem): EditionSource => ({ id: i.id, outlet: i.source, title: i.title, url: i.url, publishedAt: i.publishedAt, image: i.image, place: i.place?.name ?? null });
+const sourceOf = (i: NewsItem): EditionSource => ({ id: i.id, outlet: i.source, title: i.title, url: i.url, publishedAt: i.publishedAt, image: i.image, place: i.place?.name ?? null, at: i.place ? { lat: i.place.lat, lng: i.place.lng } : null });
 
 const describe = (i: NewsItem) =>
   `[${i.id}] ${i.source}, ${i.publishedAt?.slice(0, 10) ?? "undated"} (${i.kind ? `good news: ${i.kind}` : `hard news: ${i.beat}`}): ${i.title}${i.summary ? ` — ${i.summary}` : i.snippet ? ` — ${i.snippet}` : ""}`;

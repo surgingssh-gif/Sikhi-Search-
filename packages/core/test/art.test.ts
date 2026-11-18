@@ -2,7 +2,7 @@ import { mkdtemp, readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { drawMap, illustrateEdition, mapPlaceOf, type ImageMaker } from "../src/magazine/art";
+import { drawMap, HOUSE_STYLES, illustrateEdition, mapPlaceOf, type ImageMaker } from "../src/magazine/art";
 import type { Edition, EditionArticle } from "../src";
 import { fakeLlm } from "./fakes";
 
@@ -47,11 +47,19 @@ describe("maps", { timeout: 60_000 }, () => {
 
 describe("illustrateEdition", { timeout: 60_000 }, () => {
   const edition = (): Edition => ({ date: "2026-11-16", issue: 7, generatedAt: "", articles: [article(), article({ slug: "second", headline: "A second story" })], briefs: [], costUsd: 0 });
-  const painter = (): ImageMaker & { count: number } => {
-    const p = { count: 0, async paint() { p.count++; return { data: Buffer.from("picture"), mediaType: "image/webp" as const }; } };
+  const painter = (): ImageMaker & { count: number; prompts: string[] } => {
+    const p = {
+      count: 0,
+      prompts: [] as string[],
+      async paint(prompt: string) {
+        p.count++;
+        p.prompts.push(prompt);
+        return { data: Buffer.from("picture"), mediaType: "image/webp" as const };
+      },
+    };
     return p;
   };
-  const brief = { scene: "Running shoes on a cinder track at dawn.", alt: "Shoes on a track.", caption: "An illustration of a morning race." };
+  const brief = { style: "sunlit" as const, scene: "Running shoes on a cinder track at dawn.", alt: "Shoes on a track.", caption: "An illustration of a morning race." };
 
   it("draws maps, paints and checks illustrations, and leaves out a picture that fails twice", async () => {
     const dir = await mkdtemp(path.join(os.tmpdir(), "sikhe-art-"));
@@ -71,6 +79,9 @@ describe("illustrateEdition", { timeout: 60_000 }, () => {
     expect(await readFile(path.join(dir, first!.map!.file), "utf8")).toContain("FEROZEPUR");
     expect(second!.art).toBeNull();
     expect(images.count).toBe(3);
+    // Painted in the style the art director chose for the story's mood.
+    expect(images.prompts[0]).toContain(HOUSE_STYLES.sunlit);
+    expect(images.prompts[0]).toContain(brief.scene);
 
     // A second run leaves what was tried alone.
     await illustrateEdition(e, { llm, images, dir });
